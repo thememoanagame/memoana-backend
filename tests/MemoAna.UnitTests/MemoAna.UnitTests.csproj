@@ -108,34 +108,82 @@
       Encoding="UTF-8"
       Condition="'$(QualityGateHasBranchCoverage)' != 'True'" />
 
-    <Message Importance="High" Text="Line Coverage:    $(QualityGateLineCoverage)% [PASSED]" Condition="'$(QualityGateLineCoverage)' &gt;= '$(QualityGateThreshold)'" />
-    <Message Importance="High" Text="Line Coverage:    $(QualityGateLineCoverage)% [FAILED]" Condition="'$(QualityGateLineCoverage)' &lt; '$(QualityGateThreshold)'" />
-    <Message Importance="High" Text="Branch Coverage:  $(QualityGateBranchCoverage)% [PASSED]" Condition="'$(QualityGateBranchCoverage)' &gt;= '$(QualityGateThreshold)'" />
-    <Message Importance="High" Text="Branch Coverage:  $(QualityGateBranchCoverage)% [FAILED]" Condition="'$(QualityGateBranchCoverage)' &lt; '$(QualityGateThreshold)'" />
-    <Message Importance="High" Text="Method Coverage:  $(QualityGateMethodCoverage)% [PASSED]" Condition="'$(QualityGateMethodCoverage)' &gt;= '$(QualityGateThreshold)'" />
-    <Message Importance="High" Text="Method Coverage:  $(QualityGateMethodCoverage)% [FAILED]" Condition="'$(QualityGateMethodCoverage)' &lt; '$(QualityGateThreshold)'" />
-    <Message Importance="High" Text="Required:         $(QualityGateThreshold).00%" />
+    <PropertyGroup>
+      <QualityGateLineFailed Condition="'$(QualityGateLineCoverage)' &lt; '$(QualityGateThreshold)'">true</QualityGateLineFailed>
+      <QualityGateBranchFailed Condition="'$(QualityGateBranchCoverage)' &lt; '$(QualityGateThreshold)'">true</QualityGateBranchFailed>
+      <QualityGateMethodFailed Condition="'$(QualityGateMethodCoverage)' &lt; '$(QualityGateThreshold)'">true</QualityGateMethodFailed>
+    </PropertyGroup>
+
+    <Warning
+      Code="QG001"
+      Text="Line coverage below threshold: $(QualityGateLineCoverage)% &lt; $(QualityGateThreshold)%."
+      Condition="'$(QualityGateLineFailed)' == 'true'" />
+
+    <Warning
+      Code="QG002"
+      Text="Branch coverage below threshold: $(QualityGateBranchCoverage)% &lt; $(QualityGateThreshold)%."
+      Condition="'$(QualityGateBranchFailed)' == 'true'" />
+
+    <Warning
+      Code="QG003"
+      Text="Method coverage below threshold: $(QualityGateMethodCoverage)% &lt; $(QualityGateThreshold)%."
+      Condition="'$(QualityGateMethodFailed)' == 'true'" />
+
+    <PropertyGroup>
+      <QualityGateFailureCount>0</QualityGateFailureCount>
+      <QualityGateFailureCount Condition="'$(QualityGateLineFailed)' == 'true'">1</QualityGateFailureCount>
+      <QualityGateFailureCount Condition="'$(QualityGateBranchFailed)' == 'true' and '$(QualityGateLineFailed)' == 'true'">2</QualityGateFailureCount>
+      <QualityGateFailureCount Condition="'$(QualityGateMethodFailed)' == 'true' and '$(QualityGateLineFailed)' == 'true' and '$(QualityGateBranchFailed)' == 'true'">3</QualityGateFailureCount>
+      <QualityGateFailureCount Condition="'$(QualityGateMethodFailed)' == 'true' and '$(QualityGateLineFailed)' == 'true' and '$(QualityGateBranchFailed)' != 'true'">2</QualityGateFailureCount>
+      <QualityGateFailureCount Condition="'$(QualityGateMethodFailed)' == 'true' and '$(QualityGateLineFailed)' != 'true' and '$(QualityGateBranchFailed)' == 'true'">2</QualityGateFailureCount>
+      <QualityGateFailureCount Condition="'$(QualityGateMethodFailed)' == 'true' and '$(QualityGateLineFailed)' != 'true' and '$(QualityGateBranchFailed)' != 'true'">1</QualityGateFailureCount>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <QualityGateFailureSummary Condition="'$(QualityGateFailureCount)' == '1' and '$(QualityGateLineFailed)' == 'true'">Line coverage $(QualityGateLineCoverage)% is below the required $(QualityGateThreshold)%.</QualityGateFailureSummary>
+      <QualityGateFailureSummary Condition="'$(QualityGateFailureCount)' == '1' and '$(QualityGateBranchFailed)' == 'true'">Branch coverage $(QualityGateBranchCoverage)% is below the required $(QualityGateThreshold)%.</QualityGateFailureSummary>
+      <QualityGateFailureSummary Condition="'$(QualityGateFailureCount)' == '1' and '$(QualityGateMethodFailed)' == 'true'">Method coverage $(QualityGateMethodCoverage)% is below the required $(QualityGateThreshold)%.</QualityGateFailureSummary>
+      <QualityGateFailureSummary Condition="'$(QualityGateFailureCount)' == '2' and '$(QualityGateLineFailed)' == 'true' and '$(QualityGateBranchFailed)' == 'true'">Line coverage $(QualityGateLineCoverage)% and branch coverage $(QualityGateBranchCoverage)% are below the required $(QualityGateThreshold)%.</QualityGateFailureSummary>
+      <QualityGateFailureSummary Condition="'$(QualityGateFailureCount)' == '2' and '$(QualityGateLineFailed)' == 'true' and '$(QualityGateMethodFailed)' == 'true'">Line coverage $(QualityGateLineCoverage)% and method coverage $(QualityGateMethodCoverage)% are below the required $(QualityGateThreshold)%.</QualityGateFailureSummary>
+      <QualityGateFailureSummary Condition="'$(QualityGateFailureCount)' == '2' and '$(QualityGateBranchFailed)' == 'true' and '$(QualityGateMethodFailed)' == 'true'">Branch coverage $(QualityGateBranchCoverage)% and method coverage $(QualityGateMethodCoverage)% are below the required $(QualityGateThreshold)%.</QualityGateFailureSummary>
+      <QualityGateFailureSummary Condition="'$(QualityGateFailureCount)' == '3'">Line coverage $(QualityGateLineCoverage)%, branch coverage $(QualityGateBranchCoverage)% and method coverage $(QualityGateMethodCoverage)% are below the required $(QualityGateThreshold)%.</QualityGateFailureSummary>
+    </PropertyGroup>
+
+    <Message
+      Importance="High"
+      Text="Line Coverage:    $(QualityGateLineCoverage)% [PASSED]"
+      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
+
+    <Message
+      Importance="High"
+      Text="Branch Coverage:  $(QualityGateBranchCoverage)% [PASSED]"
+      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
+
+    <Message
+      Importance="High"
+      Text="Method Coverage:  $(QualityGateMethodCoverage)% [PASSED]"
+      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
+
+    <Message
+      Importance="High"
+      Text="Required:         $(QualityGateThreshold).00%"
+      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
 
     <Message
       Importance="High"
       Text="QUALITY GATE: PASSED"
-      Condition="'$(QualityGateReportGeneratorExitCode)' == '0' and '$(QualityGateLineCoverage)' &gt;= '$(QualityGateThreshold)' and '$(QualityGateBranchCoverage)' &gt;= '$(QualityGateThreshold)' and '$(QualityGateMethodCoverage)' &gt;= '$(QualityGateThreshold)'" />
+      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
 
-    <Message
-      Importance="High"
-      Text="QUALITY GATE: FAILED"
-      Condition="'$(QualityGateReportGeneratorExitCode)' != '0' or '$(QualityGateLineCoverage)' &lt; '$(QualityGateThreshold)' or '$(QualityGateBranchCoverage)' &lt; '$(QualityGateThreshold)' or '$(QualityGateMethodCoverage)' &lt; '$(QualityGateThreshold)'" />
+    <Error
+      Condition="'$(QualityGateFailureCount)' != '0'"
+      Text="Quality Gate failed: $(QualityGateFailureSummary)" />
 
-    <Message
-      Importance="High"
-      Text="Reason: one or more coverage metrics are below the required threshold."
-      Condition="'$(QualityGateReportGeneratorExitCode)' != '0' or '$(QualityGateLineCoverage)' &lt; '$(QualityGateThreshold)' or '$(QualityGateBranchCoverage)' &lt; '$(QualityGateThreshold)' or '$(QualityGateMethodCoverage)' &lt; '$(QualityGateThreshold)'" />
+    <Error
+      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' != '0'"
+      Text="Quality Gate failed: ReportGenerator exited with code $(QualityGateReportGeneratorExitCode)." />
 
     <Message Importance="High" Text="============================================================" />
 
-    <Error
-      Condition="'$(QualityGateReportGeneratorExitCode)' != '0' or '$(QualityGateLineCoverage)' &lt; '$(QualityGateThreshold)' or '$(QualityGateBranchCoverage)' &lt; '$(QualityGateThreshold)' or '$(QualityGateMethodCoverage)' &lt; '$(QualityGateThreshold)'"
-      Text="Quality Gate failed: line, branch and/or method coverage is below $(QualityGateThreshold)%." />
   </Target>
 
 </Project>
