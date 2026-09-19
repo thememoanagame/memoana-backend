@@ -134,13 +134,20 @@ jobs:
         "$([math]::Round($methodRate, 2))" | Out-File (Join-Path $qualityGateDir "method-rate.txt") -Encoding utf8
 
         # Validação das regras de Quality Gate
-        $failed = $false$failures = @()
+        $failed = $false
+        $failures = @()
 
-        if ($lineRate -lt $threshold) {$failed = $true$failures += "Line coverage ($([math]::Round($lineRate, 2))\%) is below the required$threshold%."
+        if ($lineRate -lt $threshold) {
+            $failed = $true
+            $failures += "Line coverage ($([math]::Round($lineRate, 2))\%) is below the required$threshold%."
         }
-        if ($branchRate -lt $threshold) {$failed = $true$failures += "Branch coverage ($([math]::Round($branchRate, 2))\%) is below the required$threshold%."
+        if ($branchRate -lt $threshold) {
+           $failed = $true
+           $failures += "Branch coverage ($([math]::Round($branchRate, 2))\%) is below the required$threshold%."
         }
-        if ($methodRate -lt $threshold) {$failed = $true$failures += "Method coverage ($([math]::Round($methodRate, 2))\%) is below the required$threshold%."
+        if ($methodRate -lt $threshold) {
+            $failed = $true
+            $failures += "Method coverage ($([math]::Round($methodRate, 2))\%) is below the required$threshold%."
         }
 
         if ($failed) {
@@ -148,6 +155,7 @@ jobs:
             Write-Error "Quality Gate failed: $summaryText"
             exit 1
         }
+
     - name: Append test execution report
       if: always()
       shell: pwsh
