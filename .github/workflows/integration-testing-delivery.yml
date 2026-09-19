@@ -37,9 +37,9 @@ jobs:
       working-directory: ${{ github.workspace }}/tests/MemoAna.UnitTests/ 
       continue-on-error: true
       run: |
-        New-Item -ItemType Directory -Force -Path ${{ env.TEST_RESULTS_DIR }} | Out-Null
+        New-Item -ItemType Directory -Force -Path @(Join-Path '${{ env.TEST_RESULTS_DIR }}' 'QualityGate') | Out-Null
         $outputFile = Join-Path ${{ env.TEST_RESULTS_DIR }} test-output.txt
-        & dotnet test --no-build`
+        & dotnet build -t:ValidateQualityGate`
           --configuration Release `
           --results-directory $env:GITHUB_WORKSPACE/QualityGate 2>&1 | Tee-Object -FilePath $outputFile
         $exitCode = $LASTEXITCODE
@@ -100,14 +100,14 @@ jobs:
     - name: Append test execution report
       if: always()
       shell: pwsh
-      run: if (Test-Path ${{ env.TEST_RESULTS_DIR }}/QualityGate/Summary.md) { Get-Content ${{ env.TEST_RESULTS_DIR }}/QualityGate/Summary.md | Add-Content $env:GITHUB_STEP_SUMMARY } else { Add-Content $env:GITHUB_STEP_SUMMARY 'Coverage report was not generated.' }
+      run: if (Test-Path ${{ env.TEST_RESULTS_DIR }}/QualityGate/Report/Summary.md) { Get-Content ${{ env.TEST_RESULTS_DIR }}/QualityGate/Report/Summary.md | Add-Content $env:GITHUB_STEP_SUMMARY } else { Add-Content $env:GITHUB_STEP_SUMMARY 'Coverage report was not generated.' }
 
     - name: Upload test and coverage reports
       if: always()
       uses: actions/upload-artifact@v7
       with:
         name: Continuous-Testing-Reports
-        path: ${{ env.TEST_RESULTS_DIR }}/QualityGate/
+        path: ${{ env.TEST_RESULTS_DIR }}
         if-no-files-found: warn
 
     - name: Fail if tests failed
