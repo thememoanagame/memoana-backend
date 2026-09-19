@@ -70,7 +70,6 @@ public sealed class MatchSession
     /// <param name="session">The server-assigned session identity.</param>
     /// <param name="match">The optional server-assigned match identity.</param>
     /// <returns>A new session in <see cref="SessionLifecycle.WaitingForPlayers"/>.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="session"/> is invalid.</exception>
     public static MatchSession Create(SessionIdentity session, MatchIdentity? match = null) =>
         new(session, match);
 
