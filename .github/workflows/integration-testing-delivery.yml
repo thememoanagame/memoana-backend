@@ -37,39 +37,39 @@ jobs:
       working-directory: ${{ github.workspace }}/tests/MemoAna.UnitTests/ 
       continue-on-error: true
       run: |
-        New-Item -ItemType Directory -Force -Path $env:TEST_RESULTS_DIR | Out-Null
-        $outputFile = Join-Path $env:GITHUB_WORKSPACE '$env:TEST_RESULTS_DIR/test-output.txt'
+        New-Item -ItemType Directory -Force -Path ${{ env.TEST_RESULTS_DIR }} | Out-Null
+        $outputFile = Join-Path ${{ env.TEST_RESULTS_DIR }} test-output.txt
         & dotnet test --no-build`
           --configuration Release `
           --results-directory $env:GITHUB_WORKSPACE/QualityGate 2>&1 | Tee-Object -FilePath $outputFile
         $exitCode = $LASTEXITCODE
         "dotnet test exit code: $exitCode" | Add-Content -Path $outputFile
-        "TEST_EXIT_CODE=$exitCode" | Out-File -FilePath $env:TEST_RESULTS_DIR/QualityGate/test-exit-code.txt -Encoding utf8
+        "TEST_EXIT_CODE=$exitCode" | Out-File -FilePath ${{ env.TEST_RESULTS_DIR }}/QualityGate/test-exit-code.txt -Encoding utf8
 
     - name: Publish Test Summary
       uses: dorny/test-reporter@v1
       if: always()
       with:
         name: 'Continuous Test Results'
-        path: '$env:TEST_RESULTS_DIR/QualityGate/*.trx'
+        path: '${{ env.TEST_RESULTS_DIR }}/QualityGate/*.trx'
         reporter: 'dotnet-trx'
 
     - name: Generate coverage report
       if: always()
       shell: pwsh
       run: |
-        $coverageFiles = @(Get-ChildItem -Path "$env:TEST_RESULTS_DIR/QualityGate" -Filter 'coverage*.xml' -Recurse -File -ErrorAction SilentlyContinue)
+        $coverageFiles = @(Get-ChildItem -Path "${{ env.TEST_RESULTS_DIR }}/QualityGate" -Filter 'coverage*.xml' -Recurse -File -ErrorAction SilentlyContinue)
         if ($coverageFiles.Count -gt 0) {
-          dotnet tool run reportgenerator -reports:"./$env:TEST_RESULTS_DIR/QualityGate/*.xml" -targetdir:"./$env:TEST_RESULTS_DIR/QualityGate" "-reporttypes:Markdown;cobertura" "-assemblyfilters:+MemoAna.Backend*;-FluentValidation*;-Mediator*" "-classfilters:+*;-AspNetCoreGeneratedDocument*;-*Components*;-*.Components.*;-*.Pages.*;-*.Layout.*;-*.Shared.*;-*.Migrations.*" "-filefilters:-**/*.razor;-**/*.razor.cs;-**/obj/**/*.cs;-**/*.g.cs;-**/*LoggerMessageGenerator*/*"
+          dotnet tool run reportgenerator -reports:"./${{ env.TEST_RESULTS_DIR }}/QualityGate/*.xml" -targetdir:"./${{ env.TEST_RESULTS_DIR }}/QualityGate" "-reporttypes:Markdown;cobertura" "-assemblyfilters:+MemoAna.Backend*;-FluentValidation*;-Mediator*" "-classfilters:+*;-AspNetCoreGeneratedDocument*;-*Components*;-*.Components.*;-*.Pages.*;-*.Layout.*;-*.Shared.*;-*.Migrations.*" "-filefilters:-**/*.razor;-**/*.razor.cs;-**/obj/**/*.cs;-**/*.g.cs;-**/*LoggerMessageGenerator*/*"
         } else {
-          "# Coverage report unavailable`n`nCoverlet did not produce a coverage XML file." | Out-File $env:TEST_RESULTS_DIR/QualityGate/coverage/Summary.md -Encoding utf8
+          "# Coverage report unavailable`n`nCoverlet did not produce a coverage XML file." | Out-File ${{ env.TEST_RESULTS_DIR }}/QualityGate/coverage/Summary.md -Encoding utf8
         }
 
     - name: Enforce 80 percent line and branch coverage
       if: always()
       shell: pwsh
       run: |
-        $coverageFile = Join-Path $env:GITHUB_WORKSPACE '$env:TEST_RESULTS_DIR/QualityGate/Cobertura.xml'
+        $coverageFile = Join-Path $env:GITHUB_WORKSPACE '${{ env.TEST_RESULTS_DIR }}/QualityGate/Cobertura.xml'
         if (-not (Test-Path $coverageFile)) {
           "## Coverage gate`n`nThe filtered ReportGenerator Cobertura report was not produced." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           Write-Error "Filtered coverage data was not produced."
@@ -87,8 +87,8 @@ jobs:
         | Branch coverage | $([math]::Round($branchRate, 2))% | 80% | $(if ($branchRate -ge 80) { '✅' } else { '❌' }) |
         "@ | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
-        "LINE_COVERAGE=$([math]::Round($lineRate, 2))" | Out-File $env:TEST_RESULTS_DIR/QualityGate/line-rate.txt -Encoding utf8
-        "BRANCH_COVERAGE=$([math]::Round($branchRate, 2))" | Out-File $env:TEST_RESULTS_DIR/QualityGate/branch-rate.txt -Encoding utf8
+        "LINE_COVERAGE=$([math]::Round($lineRate, 2))" | Out-File ${{ env.TEST_RESULTS_DIR }}/QualityGate/line-rate.txt -Encoding utf8
+        "BRANCH_COVERAGE=$([math]::Round($branchRate, 2))" | Out-File ${{ env.TEST_RESULTS_DIR }}/QualityGate/branch-rate.txt -Encoding utf8
 
         if ($lineRate -lt 80) {
           Write-Error "Line coverage gate failed. `nLine coverage: $([math]::Round($lineRate, 2))%; minimum: 80%."
@@ -100,22 +100,22 @@ jobs:
     - name: Append test execution report
       if: always()
       shell: pwsh
-      run: if (Test-Path $env:TEST_RESULTS_DIR/QualityGate/Summary.md) { Get-Content $env:TEST_RESULTS_DIR/QualityGate/Summary.md | Add-Content $env:GITHUB_STEP_SUMMARY } else { Add-Content $env:GITHUB_STEP_SUMMARY 'Coverage report was not generated.' }
+      run: if (Test-Path ${{ env.TEST_RESULTS_DIR }}/QualityGate/Summary.md) { Get-Content ${{ env.TEST_RESULTS_DIR }}/QualityGate/Summary.md | Add-Content $env:GITHUB_STEP_SUMMARY } else { Add-Content $env:GITHUB_STEP_SUMMARY 'Coverage report was not generated.' }
 
     - name: Upload test and coverage reports
       if: always()
       uses: actions/upload-artifact@v7
       with:
         name: Continuous-Testing-Reports
-        path: $env:TEST_RESULTS_DIR/QualityGate/
+        path: ${{ env.TEST_RESULTS_DIR }}/QualityGate/
         if-no-files-found: warn
 
     - name: Fail if tests failed
       if: always()
       shell: pwsh
       run: |
-        if (Test-Path $env:TEST_RESULTS_DIR/QualityGate/test-exit-code.txt) {
-          $exitCode = [int](Get-Content $env:TEST_RESULTS_DIR/QualityGate/test-exit-code.txt -Raw).Replace('TEST_EXIT_CODE=', '').Trim()
+        if (Test-Path ${{ env.TEST_RESULTS_DIR }}/QualityGate/test-exit-code.txt) {
+          $exitCode = [int](Get-Content ${{ env.TEST_RESULTS_DIR }}/QualityGate/test-exit-code.txt -Raw).Replace('TEST_EXIT_CODE=', '').Trim()
           if ($exitCode -ne 0) { Write-Error "dotnet test failed with exit code $exitCode." }
         }
     
