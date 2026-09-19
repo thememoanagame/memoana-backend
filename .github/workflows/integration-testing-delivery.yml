@@ -41,7 +41,8 @@ jobs:
         $outputFile = Join-Path ${{ env.TEST_RESULTS_DIR }} test-output.txt
         & dotnet build -t:ValidateQualityGate`
           --configuration Release `
-          --results-directory $env:GITHUB_WORKSPACE/QualityGate 2>&1 | Tee-Object -FilePath $outputFile
+          --results-directory $env:GITHUB_WORKSPACE/QualityGate`
+          --v:detailed 2>&1 | Tee-Object -FilePath $outputFile
         $exitCode = $LASTEXITCODE
         "dotnet test exit code: $exitCode" | Add-Content -Path $outputFile
         "TEST_EXIT_CODE=$exitCode" | Out-File -FilePath ${{ env.TEST_RESULTS_DIR }}/QualityGate/test-exit-code.txt -Encoding utf8
@@ -69,7 +70,7 @@ jobs:
       if: always()
       shell: pwsh
       run: |
-        $coverageFile = Join-Path $env:GITHUB_WORKSPACE '${{ env.TEST_RESULTS_DIR }}/QualityGate/Cobertura.xml'
+        $coverageFile = Resolve-Path ${{ env.TEST_RESULTS_DIR }} 'QualityGate/cobertura*.xml'
         if (-not (Test-Path $coverageFile)) {
           "## Coverage gate`n`nThe filtered ReportGenerator Cobertura report was not produced." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           Write-Error "Filtered coverage data was not produced."
