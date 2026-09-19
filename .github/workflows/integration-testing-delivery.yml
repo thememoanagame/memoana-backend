@@ -41,8 +41,7 @@ jobs:
         $outputFile = Join-Path ${{ env.TEST_RESULTS_DIR }} test-output.txt
         & dotnet build -t:ValidateQualityGate`
           --configuration Release `
-          --results-directory $env:GITHUB_WORKSPACE/QualityGate`
-          --v:detailed 2>&1 | Tee-Object -FilePath $outputFile
+          --v:detailed | Tee-Object -FilePath $outputFile
         $exitCode = $LASTEXITCODE
         "dotnet test exit code: $exitCode" | Add-Content -Path $outputFile
         "TEST_EXIT_CODE=$exitCode" | Out-File -FilePath ${{ env.TEST_RESULTS_DIR }}/QualityGate/test-exit-code.txt -Encoding utf8
