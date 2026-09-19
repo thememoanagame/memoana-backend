@@ -22,13 +22,20 @@ public sealed record CancelMatchmakingRequest(string PlayerKey);
 /// <summary>Describes the outcome state of a matchmaking request.</summary>
 public enum MatchmakingStatus
 {
-    /// <summary>The player is waiting for an opponent.</summary> Waiting,
-    /// <summary>The player has been paired.</summary> Matched,
-    /// <summary>The player already has an active waiting request.</summary> AlreadyWaiting,
-    /// <summary>The player already owns a match.</summary> AlreadyMatched,
-    /// <summary>The waiting request was cancelled.</summary> Cancelled,
-    /// <summary>No active request or match was found.</summary> NotFound,
-    /// <summary>The request could not be fulfilled.</summary> Rejected
+    /// <summary>The player is waiting for an opponent.</summary>
+    Waiting,
+    /// <summary>The player has been paired.</summary>
+    Matched,
+    /// <summary>The player already has an active waiting request.</summary>
+    AlreadyWaiting,
+    /// <summary>The player already owns a match.</summary>
+    AlreadyMatched,
+    /// <summary>The waiting request was cancelled.</summary>
+    Cancelled,
+    /// <summary>No active request or match was found.</summary>
+    NotFound,
+    /// <summary>The request could not be fulfilled.</summary>
+    Rejected
 }
 
 /// <summary>Describes a server-assigned player position in a match.</summary>
