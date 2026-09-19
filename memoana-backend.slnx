@@ -1,5 +1,3 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/MemoAna/MemoAna.csproj" />
-  </Folder>
+  <Folder Name="/src/" />
 </Solution>

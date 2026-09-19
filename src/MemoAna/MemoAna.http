@@ -1,6 +1,0 @@
-@MemoAna_HostAddress = http://localhost:5179
-
-GET {{MemoAna_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
