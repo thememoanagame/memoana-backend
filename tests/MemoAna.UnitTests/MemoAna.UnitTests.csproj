@@ -71,9 +71,8 @@
 
     <PropertyGroup>
       <QualityGateMarkdownContent>$([System.IO.File]::ReadAllText('$(QualityGateMarkdownReport)'))</QualityGateMarkdownContent>
-      <QualityGateCoverageMatch>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateMarkdownContent), '^\|\s*(?:\*\*)?Total(?:\*\*)?\s*\|\s*(?:\*\*)?([0-9]+(?:\.[0-9]+)?)%(?:\*\*)?\s*\|\s*(?:\*\*)?([0-9]+(?:\.[0-9]+)?)%', System.Text.RegularExpressions.RegexOptions.Multiline))</QualityGateCoverageMatch>
-      <QualityGateLineCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateCoverageMatch), '([0-9]+(?:\.[0-9]+)?)%').Value.TrimEnd('%'))</QualityGateLineCoverage>
-      <QualityGateBranchCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateCoverageMatch), '([0-9]+(?:\.[0-9]+)?)%\s*$', System.Text.RegularExpressions.RegexOptions.Multiline).Value.TrimEnd('%'))</QualityGateBranchCoverage>
+      <QualityGateLineCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateMarkdownContent), '^\|\s*(?:\*\*)?Total(?:\*\*)?\s*\|\s*(?:\*\*)?([0-9]+(?:\.[0-9]+)?)%(?:\*\*)?\s*\|\s*(?:\*\*)?([0-9]+(?:\.[0-9]+)?)%', System.Text.RegularExpressions.RegexOptions.Multiline).Groups[1].Value)</QualityGateLineCoverage>
+      <QualityGateBranchCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateMarkdownContent), '^\|\s*(?:\*\*)?Total(?:\*\*)?\s*\|\s*(?:\*\*)?([0-9]+(?:\.[0-9]+)?)%(?:\*\*)?\s*\|\s*(?:\*\*)?([0-9]+(?:\.[0-9]+)?)%', System.Text.RegularExpressions.RegexOptions.Multiline).Groups[2].Value)</QualityGateBranchCoverage>
     </PropertyGroup>
 
     <Error
