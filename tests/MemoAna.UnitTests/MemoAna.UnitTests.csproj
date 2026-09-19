@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -6,6 +6,11 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <TestingPlatformCommandLineArguments>--report-trx --report-trx-filename test-results.trx --coverlet --coverlet-output-format cobertura --coverlet-include "[MemoAna]*,[MemoAna.Application]*,[MemoAna.Domain]*,[MemoAna.Infrastructure]*" --coverlet-exclude "[*.Migrations]*,[*.UnitTests]*,[Mediator*]*,[FluentValidation*]*"</TestingPlatformCommandLineArguments>
+    <QualityGateThreshold>80</QualityGateThreshold>
+    <QualityGateResultsDirectory>$(MSBuildProjectDirectory)/TestResults/QualityGate</QualityGateResultsDirectory>
+    <QualityGateReportDirectory>$(QualityGateResultsDirectory)/Report</QualityGateReportDirectory>
+    <QualityGateMarkdownReport>$(QualityGateReportDirectory)/Summary.md</QualityGateMarkdownReport>
+    <QualityGateCoveragePattern>$(QualityGateResultsDirectory)/**/coverage.cobertura.xml</QualityGateCoveragePattern>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,5 +35,96 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\MemoAna\MemoAna.csproj" />
   </ItemGroup>
+
+  <Target Name="ValidateQualityGate" DependsOnTargets="Build">
+    <Message Importance="High" Text="============================================================" />
+    <Message Importance="High" Text="MemoAna Unit Test Quality Gate" />
+    <Message Importance="High" Text="============================================================" />
+    <Message Importance="High" Text="Running unit tests with code coverage..." />
+
+    <RemoveDir Directories="$(QualityGateResultsDirectory)" />
+    <MakeDir Directories="$(QualityGateResultsDirectory)" />
+
+    <Exec
+      Command="dotnet test &quot;$(MSBuildProjectFullPath)&quot; --no-build --configuration &quot;$(Configuration)&quot; --results-directory &quot;$(QualityGateResultsDirectory)&quot;"
+      ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="QualityGateTestExitCode" />
+    </Exec>
+
+    <Error
+      Condition="'$(QualityGateTestExitCode)' != '0'"
+      Text="Quality Gate aborted: unit tests failed with exit code $(QualityGateTestExitCode)." />
+
+    <Exec
+      Command="dotnet tool run reportgenerator -reports:&quot;$(QualityGateCoveragePattern)&quot; -targetdir:&quot;$(QualityGateReportDirectory)&quot; -reporttypes:MarkdownSummary -minimumCoverageThresholds:lineCoverage=$(QualityGateThreshold) -minimumCoverageThresholds:branchCoverage=$(QualityGateThreshold)"
+      ContinueOnError="true">
+      <Output TaskParameter="ExitCode" PropertyName="QualityGateReportGeneratorExitCode" />
+    </Exec>
+
+    <Error
+      Condition="'$(QualityGateReportGeneratorExitCode)' != '0' and !Exists('$(QualityGateMarkdownReport)')"
+      Text="Quality Gate aborted: ReportGenerator failed with exit code $(QualityGateReportGeneratorExitCode) and did not produce the Markdown report." />
+
+    <Error
+      Condition="!Exists('$(QualityGateMarkdownReport)')"
+      Text="Quality Gate aborted: Markdown coverage report was not found at $(QualityGateMarkdownReport)." />
+
+    <PropertyGroup>
+      <QualityGateMarkdownContent>$([System.IO.File]::ReadAllText('$(QualityGateMarkdownReport)'))</QualityGateMarkdownContent>
+      <QualityGateLineCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateMarkdownContent), '^|s*(?:**)?Total(?:**)?s*|s*(?:**)?([0-9]+(?:.[0-9]+)?)%(?:**)?s*|s*(?:**)?([0-9]+(?:.[0-9]+)?)%', System.Text.RegularExpressions.RegexOptions.Multiline).Groups[1].Value)</QualityGateLineCoverage>
+      <QualityGateBranchCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateMarkdownContent), '^|s*(?:**)?Total(?:**)?s*|s*(?:**)?([0-9]+(?:.[0-9]+)?)%(?:**)?s*|s*(?:**)?([0-9]+(?:.[0-9]+)?)%', System.Text.RegularExpressions.RegexOptions.Multiline).Groups[2].Value)</QualityGateBranchCoverage>
+    </PropertyGroup>
+
+    <Error
+      Condition="'$(QualityGateLineCoverage)' == '' or '$(QualityGateBranchCoverage)' == ''"
+      Text="Quality Gate aborted: unable to extract total line and branch coverage percentages from $(QualityGateMarkdownReport)." />
+
+    <PropertyGroup>
+      <QualityGateLinePassed>$([MSBuild]::GreaterThanOrEqual($(QualityGateLineCoverage), $(QualityGateThreshold)))</QualityGateLinePassed>
+      <QualityGateBranchPassed>$([MSBuild]::GreaterThanOrEqual($(QualityGateBranchCoverage), $(QualityGateThreshold)))</QualityGateBranchPassed>
+    </PropertyGroup>
+
+    <Message Importance="High" Text="Line Coverage:   $(QualityGateLineCoverage)% [$([System.String]::Copy('PASSED').Trim())]" Condition="'$(QualityGateLinePassed)' == 'true'" />
+    <Message Importance="High" Text="Line Coverage:   $(QualityGateLineCoverage)% [FAILED]" Condition="'$(QualityGateLinePassed)' != 'true'" />
+    <Message Importance="High" Text="Branch Coverage: $(QualityGateBranchCoverage)% [PASSED]" Condition="'$(QualityGateBranchPassed)' == 'true'" />
+    <Message Importance="High" Text="Branch Coverage: $(QualityGateBranchCoverage)% [FAILED]" Condition="'$(QualityGateBranchPassed)' != 'true'" />
+    <Message Importance="High" Text="Required:        $(QualityGateThreshold).00%" />
+    <Message Importance="High" Text=" " />
+
+    <Message
+      Importance="High"
+      Text="QUALITY GATE: PASSED"
+      Condition="'$(QualityGateLinePassed)' == 'true' and '$(QualityGateBranchPassed)' == 'true'" />
+
+    <Message
+      Importance="High"
+      Text="QUALITY GATE: FAILED"
+      Condition="'$(QualityGateLinePassed)' != 'true' or '$(QualityGateBranchPassed)' != 'true'" />
+
+    <Message
+      Importance="High"
+      Text="Reason: Line coverage and branch coverage are below the required threshold."
+      Condition="'$(QualityGateLinePassed)' != 'true' and '$(QualityGateBranchPassed)' != 'true'" />
+
+    <Message
+      Importance="High"
+      Text="Reason: Line coverage is below the required threshold."
+      Condition="'$(QualityGateLinePassed)' != 'true' and '$(QualityGateBranchPassed)' == 'true'" />
+
+    <Message
+      Importance="High"
+      Text="Reason: Branch coverage is below the required threshold."
+      Condition="'$(QualityGateLinePassed)' == 'true' and '$(QualityGateBranchPassed)' != 'true'" />
+
+    <Message Importance="High" Text="============================================================" />
+
+    <Error
+      Condition="'$(QualityGateLinePassed)' != 'true' or '$(QualityGateBranchPassed)' != 'true'"
+      Text="Quality Gate failed. Required line and branch coverage: $(QualityGateThreshold)%. See $(QualityGateMarkdownReport)." />
+
+    <Error
+      Condition="'$(QualityGateReportGeneratorExitCode)' != '0'"
+      Text="Quality Gate failed: ReportGenerator returned exit code $(QualityGateReportGeneratorExitCode)." />
+  </Target>
 
 </Project>
