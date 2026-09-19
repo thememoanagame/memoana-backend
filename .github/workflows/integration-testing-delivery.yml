@@ -114,9 +114,9 @@ jobs:
         ## Coverage gate
         | Metric | Result | Minimum | Status |
         | --- | ---: | ---: | ---: |
-        | Line coverage | $([math]::Round($lineRate, 2))% | $threshold\% \vert{}$lineStatus |
-        | Branch coverage | $([math]::Round($branchRate, 2))% | $threshold\% \vert{}$branchStatus |
-        | Method coverage | $([math]::Round($methodRate, 2))% | $threshold\% \vert{}$methodStatus |
+        | Line coverage | $([math]::Round($lineRate, 2))% | $threshold\% | $lineStatus |
+        | Branch coverage | $([math]::Round($branchRate, 2))% | $threshold\% | $branchStatus |
+        | Method coverage | $([math]::Round($methodRate, 2))% | $threshold\% | $methodStatus |
         "@ | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
         # Salvando os arquivos de texto auxiliares
