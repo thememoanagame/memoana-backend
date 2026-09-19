@@ -77,11 +77,13 @@
     </PropertyGroup>
 
     <Error
-      Condition="'$(QualityGateCoverageMatch)' == '' or '$(QualityGateLineCoverage)' == '' or '$(QualityGateBranchCoverage)' == ''"
+      Condition="'$(QualityGateLineCoverage)' == '' or '$(QualityGateBranchCoverage)' == ''"
       Text="Quality Gate aborted: unable to extract total line and branch coverage percentages from $(QualityGateMarkdownReport)." />
 
-    <Message Importance="High" Text="Line Coverage:   $(QualityGateLineCoverage)% [$([System.String]::Copy('PASSED'))]" />
-    <Message Importance="High" Text="Branch Coverage: $(QualityGateBranchCoverage)% [$([System.String]::Copy('PASSED'))]" />
+    <Message Importance="High" Text="Line Coverage:   $(QualityGateLineCoverage)% [PASSED]" Condition="'$(QualityGateLineCoverage)' &gt;= '$(QualityGateThreshold)'" />
+    <Message Importance="High" Text="Line Coverage:   $(QualityGateLineCoverage)% [FAILED]" Condition="'$(QualityGateLineCoverage)' &lt; '$(QualityGateThreshold)'" />
+    <Message Importance="High" Text="Branch Coverage: $(QualityGateBranchCoverage)% [PASSED]" Condition="'$(QualityGateBranchCoverage)' &gt;= '$(QualityGateThreshold)'" />
+    <Message Importance="High" Text="Branch Coverage: $(QualityGateBranchCoverage)% [FAILED]" Condition="'$(QualityGateBranchCoverage)' &lt; '$(QualityGateThreshold)'" />
     <Message Importance="High" Text="Required:        $(QualityGateThreshold).00%" />
 
     <Message
