@@ -81,7 +81,7 @@ jobs:
         $content = Get-Content$summaryFile -Raw
         $threshold = [double]$env:QUALITY_GRADE_THRESHOLD
 
-        # Extração dos dados do cabeçalho do Summary.txt (seguindo a lógica do Target MSBuild)
+        # Extração dos dados do cabeçalho do Summary.txt
         $lineMatch = [regex]::Match($content, '(?im)^\s*Line coverage:\s*([0-9]+(?:\.[0-9]+)?)%')
         $methodMatch = [regex]::Match($content, '(?im)^\s*Method coverage:\s*([0-9]+(?:\.[0-9]+)?)%')
         $branchMatch = [regex]::Match($content, '(?im)^\s*Branch coverage:\s*([0-9]+(?:\.[0-9]+)?)%')
@@ -129,9 +129,9 @@ jobs:
         $qualityGateDir = Join-Path$env:TEST_RESULTS_DIR "QualityGate"
         if (-not (Test-Path $qualityGateDir)) { New-Item -ItemType Directory -Path$qualityGateDir | Out-Null }
         
-        "$([math]::Round($lineRate, 2))" \vert{} Out-File (Join-Path $qualityGateDir "line-rate.txt") -Encoding utf8
-        "$([math]::Round($branchRate, 2))" \vert{} Out-File (Join-Path $qualityGateDir "branch-rate.txt") -Encoding utf8
-        "$([math]::Round($methodRate, 2))" \vert{} Out-File (Join-Path $qualityGateDir "method-rate.txt") -Encoding utf8
+        "$([math]::Round($lineRate, 2))" | Out-File (Join-Path $qualityGateDir "line-rate.txt") -Encoding utf8
+        "$([math]::Round($branchRate, 2))" | Out-File (Join-Path $qualityGateDir "branch-rate.txt") -Encoding utf8
+        "$([math]::Round($methodRate, 2))" | Out-File (Join-Path $qualityGateDir "method-rate.txt") -Encoding utf8
 
         # Validação das regras de Quality Gate
         $failed = $false$failures = @()
