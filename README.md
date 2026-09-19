@@ -17,11 +17,15 @@ The unit-test project exposes the official local quality-gate command:
 2. executes the unit tests with the existing Coverlet MTP configuration;
 3. generates a Cobertura coverage report;
 4. uses the repository-local `dotnet-reportgenerator-globaltool`;
-5. generates a Markdown summary;
-6. extracts the total line and branch coverage percentages from the Markdown report;
-7. validates both metrics against the required **80%** threshold;
-8. prints the result in a stable, human-readable `en-US` style;
-9. fails the build when either metric is below 80%, including a combined message when both are below the threshold.
+5. generates a Markdown summary and a text summary;
+6. applies the configured assembly filters so test-only/external assemblies such as FluentValidation and Mediator are not included in the quality-gate coverage scope;
+7. extracts total line, branch and method coverage from `Summary.txt`;
+8. normalizes branch coverage into `Summary.txt` when ReportGenerator omits the branch-percentage line (for example when the report has zero total branches), using the covered/total branch counts;
+9. validates line coverage, branch coverage and method coverage against the required **80%** threshold;
+10. prints the three coverage results in a stable, human-readable `en-US` style;
+11. fails the build when any required metric is below 80%.
+
+The method-coverage gate is intentionally tied to the text-report contract: `Summary.txt` must contain a `Method coverage: N%` line. If that line is not produced, the quality gate aborts instead of silently skipping method coverage.
 
 The generated quality-gate artifacts are written under:
 
@@ -31,7 +35,8 @@ The quality gate requires all of the following:
 
 - unit tests pass;
 - line coverage is at least 80%;
-- branch coverage is at least 80%.
+- branch coverage is at least 80%;
+- method coverage is at least 80%.
 
 Do not consider a test change complete until the quality-gate command passes.
 
