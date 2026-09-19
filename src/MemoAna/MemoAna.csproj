@@ -4,6 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>$(MSBuildProjectDirectory)\Docs\$(AssemblyName).xml</DocumentationFile>
+    <WarningsAsErrors>CS1591</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
