@@ -125,9 +125,10 @@ jobs:
         | Method coverage | $([math]::Round($methodRate, 2))% | $threshold\% \vert{}$methodStatus |
         "@ | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
-        # Salvando os arquivos de texto auxiliares (compatível com o comportamento anterior)
+        # Salvando os arquivos de texto auxiliares
         $qualityGateDir = Join-Path$env:TEST_RESULTS_DIR "QualityGate"
         if (-not (Test-Path $qualityGateDir)) { New-Item -ItemType Directory -Path$qualityGateDir | Out-Null }
+        
         "$([math]::Round($lineRate, 2))" \vert{} Out-File (Join-Path $qualityGateDir "line-rate.txt") -Encoding utf8
         "$([math]::Round($branchRate, 2))" \vert{} Out-File (Join-Path $qualityGateDir "branch-rate.txt") -Encoding utf8
         "$([math]::Round($methodRate, 2))" \vert{} Out-File (Join-Path $qualityGateDir "method-rate.txt") -Encoding utf8
@@ -147,7 +148,6 @@ jobs:
             Write-Error "Quality Gate failed: $summaryText"
             exit 1
         }
-
     - name: Append test execution report
       if: always()
       shell: pwsh
