@@ -50,13 +50,6 @@ jobs:
       run: |
         ls -R ${{ env.TEST_RESULTS_DIR }}
   
-    - name: Upload test output
-      if: always()
-      uses: actions/upload-artifact@v7
-      with:
-        name: Continuous-Testing-Output
-        path: ${{ env.TEST_RESULTS_DIR }}/test-output.txt
-
     - name: Publish Test Summary
       uses: dorny/test-reporter@v1
       if: always()
@@ -71,7 +64,7 @@ jobs:
       env:
         QUALITY_GRADE_THRESHOLD: 80
       run: |
-        $summaryFile = Join-Path$env:TEST_RESULTS_DIR "QualityGate/Summary.txt"
+        $summaryFile = Join-Path $env:TEST_RESULTS_DIR "QualityGate/Summary.txt"
         if (-not (Test-Path $summaryFile)) {
             "## Coverage gate`n`nThe ReportGenerator Summary.txt report was not produced." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             Write-Error "Summary coverage data was not produced."
