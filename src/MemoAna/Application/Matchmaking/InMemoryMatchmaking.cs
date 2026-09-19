@@ -1,5 +1,7 @@
 using MemoAna.Domain.Matchmaking;
 using MemoAna.Domain.Sessions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MemoAna.Application.Matchmaking;
 
@@ -37,6 +39,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
     private readonly IMatchSessionRuntimeFactory _runtimeFactory;
     private readonly MatchmakingOptions _options;
     private int _disposed;
+    private readonly ILogger<InMemoryMatchmaking> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InMemoryMatchmaking"/> class.
@@ -45,18 +48,22 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
     /// <param name="identityGenerator">Server Identity Generator</param>
     /// <param name="compatibilityPolicy">Compatibility Policy</param>
     /// <param name="options">Matchmaking Options</param>
+    /// <param name="logger">Optional logger used to record matchmaking lifecycle events.</param>
     /// <exception cref="ArgumentNullException">thrown when param runtimeFactory null</exception>
     public InMemoryMatchmaking(
         IMatchSessionRuntimeFactory runtimeFactory,
         IServerMatchmakingIdentityGenerator? identityGenerator = null,
         IMatchmakingCompatibilityPolicy? compatibilityPolicy = null,
-        MatchmakingOptions? options = null)
+        MatchmakingOptions? options = null,
+        ILogger<InMemoryMatchmaking>? logger = null)
     {
         _runtimeFactory = runtimeFactory ?? throw new ArgumentNullException(nameof(runtimeFactory));
         _identityGenerator = identityGenerator ?? new GuidMatchmakingIdentityGenerator();
         _compatibilityPolicy = compatibilityPolicy ?? new DefaultMatchmakingCompatibilityPolicy();
         _options = options ?? new MatchmakingOptions();
         _options.Validate();
+        _logger = logger ?? NullLogger<InMemoryMatchmaking>.Instance;
+        _logger.LogDebug("In-memory matchmaking initialized with capacity {MaximumWaitingPlayers}.", _options.MaximumWaitingPlayers);
     }
 
     /// <summary>Gets the number of currently waiting players.</summary>
@@ -87,6 +94,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         ValidateRequest(request);
         cancellationToken.ThrowIfCancellationRequested();
         ThrowIfDisposed();
+        _logger.LogDebug("Matchmaking join requested for player {PlayerKey}, request {RequestId}.", request.PlayerKey, request.EffectiveRequestId);
 
         WaitingEntry? incoming;
         WaitingEntry? opponent;
@@ -96,6 +104,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
 
             if (_matchedPlayers.TryGetValue(request.PlayerKey, out var existingMatch))
             {
+                _logger.LogWarning("Player {PlayerKey} attempted to join after being matched.", request.PlayerKey);
                 return Task.FromResult(new MatchmakingResult(
                     MatchmakingStatus.AlreadyMatched,
                     request.PlayerKey,
@@ -106,6 +115,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
 
             if (_activePlayers.ContainsKey(request.PlayerKey))
             {
+                _logger.LogWarning("Duplicate matchmaking request for waiting player {PlayerKey}.", request.PlayerKey);
                 return Task.FromResult(new MatchmakingResult(
                     MatchmakingStatus.AlreadyWaiting,
                     request.PlayerKey,
@@ -115,6 +125,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
 
             if (_activePlayers.Count >= _options.MaximumWaitingPlayers)
             {
+                _logger.LogWarning("Matchmaking capacity reached at {WaitingCount} players.", _activePlayers.Count);
                 return Task.FromResult(new MatchmakingResult(
                     MatchmakingStatus.Rejected,
                     request.PlayerKey,
@@ -130,6 +141,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
             {
                 incoming.WaitingNode = _waiting.AddLast(incoming);
                 RegisterCancellation(incoming, cancellationToken);
+                _logger.LogInformation("Player {PlayerKey} entered the matchmaking queue. Queue size: {WaitingCount}.", request.PlayerKey, _waiting.Count);
                 return Task.FromResult(new MatchmakingResult(
                     MatchmakingStatus.Waiting,
                     request.PlayerKey,
@@ -197,6 +209,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         }
 
         cancellationRegistration.Dispose();
+        _logger.LogInformation("Matchmaking request cancelled for player {PlayerKey}.", request.PlayerKey);
         return Task.FromResult(result);
     }
 
@@ -221,6 +234,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
             ThrowIfDisposed();
             if (_matchedPlayers.TryGetValue(playerKey, out var match))
             {
+                _logger.LogDebug("Matchmaking result already available for player {PlayerKey}, match {MatchId}.", playerKey, match.Match.Value);
                 return new MatchmakingResult(
                     MatchmakingStatus.Matched,
                     playerKey,
@@ -230,6 +244,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
 
             if (!_activePlayers.TryGetValue(playerKey, out entry!))
             {
+                _logger.LogWarning("No active matchmaking request found for player {PlayerKey}.", playerKey);
                 return new MatchmakingResult(
                     MatchmakingStatus.NotFound,
                     playerKey,
@@ -256,11 +271,13 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
             if (_matchedSessions.TryGetValue(session, out var source))
             {
                 events = source.Subscribe(cancellationToken);
+                _logger.LogDebug("Event subscription created for session {SessionId}.", session.Value);
                 return true;
             }
         }
 
         events = null;
+        _logger.LogWarning("Event subscription requested for unavailable session {SessionId}.", session.Value);
         return false;
     }
 
@@ -274,7 +291,9 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
     {
         lock (_gate)
         {
-            return _sessionRuntimes.TryGetValue(session, out runtime);
+            var found = _sessionRuntimes.TryGetValue(session, out runtime);
+            _logger.LogTrace("Runtime lookup for session {SessionId} returned {Found}.", session.Value, found);
+            return found;
         }
     }
 
@@ -315,6 +334,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
             cancellationRegistration.Dispose();
         }
 
+        _logger.LogInformation("Matchmaking disposed and {EntryCount} active requests completed.", entries.Length);
         return ValueTask.CompletedTask;
     }
 
@@ -327,6 +347,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         try
         {
             var identities = _identityGenerator.Create();
+            _logger.LogDebug("Pairing players {OpponentPlayerKey} and {IncomingPlayerKey}.", opponent.Request.PlayerKey, incoming.Request.PlayerKey);
             var first = new MatchmakingPlayerAssignment(
                 opponent.Request.PlayerKey,
                 identities.FirstPlayer,
@@ -388,6 +409,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
             opponentCancellation.Dispose();
             incomingCancellation.Dispose();
 
+            _logger.LogInformation("Matchmaking completed for {MatchId} and {SessionId}.", identities.Match.Value, identities.Session.Value);
             return new MatchmakingResult(
                 MatchmakingStatus.Matched,
                 incoming.Request.PlayerKey,
@@ -396,6 +418,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         }
         catch (OperationCanceledException)
         {
+            _logger.LogWarning("Matchmaking pairing cancelled for players {OpponentPlayerKey} and {IncomingPlayerKey}.", opponent.Request.PlayerKey, incoming.Request.PlayerKey);
             await RollbackPairingAsync(
                 opponent,
                 incoming,
@@ -403,8 +426,9 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
                 cancellationToken.IsCancellationRequested).ConfigureAwait(false);
             throw;
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogError(exception, "Matchmaking pairing failed for players {OpponentPlayerKey} and {IncomingPlayerKey}.", opponent.Request.PlayerKey, incoming.Request.PlayerKey);
             await RollbackPairingAsync(opponent, incoming, runtime, false).ConfigureAwait(false);
             return new MatchmakingResult(
                 MatchmakingStatus.Rejected,
@@ -543,6 +567,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
                 entry.Request.PlayerKey,
                 entry.Request.EffectiveRequestId,
                 Reason: "Matchmaking request was cancelled."));
+            _logger.LogInformation("Matchmaking cancellation token removed player {PlayerKey} from the queue.", entry.Request.PlayerKey);
         }
     }
 

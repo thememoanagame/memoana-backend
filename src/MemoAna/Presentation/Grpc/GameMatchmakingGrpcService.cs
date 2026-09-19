@@ -4,6 +4,7 @@ using MemoAna.Application.Matchmaking;
 using MemoAna.Domain.Matchmaking;
 using MemoAna.Domain.Sessions;
 using MemoAna.Proto.GameMatchmaking.V1;
+using Microsoft.Extensions.Logging;
 using DomainLeaveReason = MemoAna.Domain.Sessions.LeaveReason;
 using DomainMatchResult = MemoAna.Domain.Sessions.MatchResult;
 using ProtoLeaveReason = MemoAna.Proto.GameMatchmaking.V1.LeaveReason;
@@ -15,7 +16,8 @@ namespace MemoAna.Presentation.Grpc;
 /// <summary>Adapts the authoritative matchmaking/session application boundary to the bidirectional gRPC protocol.</summary>
 /// <remarks>This adapter validates transport input, maps protobuf messages to domain commands, and publishes authoritative events without owning domain state.</remarks>
 public sealed class GameMatchmakingGrpcService(
-    IMatchmakingSessionGateway matchmaking)
+    IMatchmakingSessionGateway matchmaking,
+    ILogger<GameMatchmakingGrpcService> logger)
     : GameMatchmakingService.GameMatchmakingServiceBase
 {
     private const int MaximumCommandIdLength = 128;
@@ -40,6 +42,7 @@ public sealed class GameMatchmakingGrpcService(
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
             context.CancellationToken);
         var token = cancellation.Token;
+        logger.LogInformation("gRPC matchmaking stream established.");
         var output = Channel.CreateBounded<ServerEvent>(new BoundedChannelOptions(128)
         {
             FullMode = BoundedChannelFullMode.Wait,
@@ -57,6 +60,7 @@ public sealed class GameMatchmakingGrpcService(
         }
         finally
         {
+            logger.LogInformation("gRPC matchmaking stream closing.");
             cancellation.Cancel();
             output.Writer.TryComplete();
             try
@@ -93,6 +97,7 @@ public sealed class GameMatchmakingGrpcService(
                 var command = requestStream.Current;
                 if (!TryValidate(command, out var protocolError))
                 {
+                    logger.LogWarning("Rejected malformed gRPC command before application processing.");
                     await output.WriteAsync(protocolError!, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
@@ -101,6 +106,7 @@ public sealed class GameMatchmakingGrpcService(
                 {
                     if (bound || playerKey is not null)
                     {
+                        logger.LogWarning("Rejected duplicate JoinSession command on one gRPC stream.");
                         await output.WriteAsync(ProtocolError(
                             ProtocolErrorCode.MalformedMessage,
                             "Only one JoinSession command is allowed per stream."), cancellationToken);
@@ -116,6 +122,7 @@ public sealed class GameMatchmakingGrpcService(
                             playerKey,
                             RequestId: command.Metadata.CommandId),
                         cancellationToken).ConfigureAwait(false);
+                    logger.LogDebug("Matchmaking join processed with status {Status} for request {RequestId}.", joined.Status, command.Metadata.CommandId);
 
                     if (joined.Status == MatchmakingStatus.Waiting)
                     {
@@ -125,6 +132,7 @@ public sealed class GameMatchmakingGrpcService(
 
                     if (!joined.IsSuccess || joined.Match is null)
                     {
+                        logger.LogWarning("Matchmaking request {RequestId} was rejected with status {Status}.", command.Metadata.CommandId, joined.Status);
                         await output.WriteAsync(ProtocolError(
                             ProtocolErrorCode.MalformedMessage,
                             joined.Reason ?? "The matchmaking request was rejected."),
@@ -134,6 +142,7 @@ public sealed class GameMatchmakingGrpcService(
 
                     match = joined.Match;
                     bound = true;
+                    logger.LogInformation("gRPC stream bound to {MatchId} and {SessionId}.", match.Match.Value, match.Session.Value);
                     await PublishMatchAcceptedAsync(output, match, cancellationToken)
                         .ConfigureAwait(false);
                     sessionEvents = PublishSessionEventsAsync(match, output, cancellationToken);
@@ -143,6 +152,7 @@ public sealed class GameMatchmakingGrpcService(
 
                 if (!bound || match is null || !MatchesIdentity(command.Metadata.Identity, match))
                 {
+                    logger.LogWarning("Rejected gRPC command because stream identity was not bound.");
                     await output.WriteAsync(ProtocolError(
                         ProtocolErrorCode.MissingIdentity,
                         "The command identity is not bound to this stream."),
@@ -153,6 +163,7 @@ public sealed class GameMatchmakingGrpcService(
                 var runtime = GetRuntimeEvents(match, cancellationToken);
                 if (runtime is null)
                 {
+                    logger.LogWarning("Session runtime unavailable for {SessionId}.", match.Session.Value);
                     await output.WriteAsync(ProtocolError(
                         ProtocolErrorCode.MalformedMessage,
                         "The session is no longer available."),
@@ -163,6 +174,7 @@ public sealed class GameMatchmakingGrpcService(
                 var applicationCommand = ToDomainCommand(command, match);
                 if (applicationCommand is null)
                 {
+                    logger.LogWarning("Rejected unsupported command {CommandId} for {SessionId}.", command.Metadata.CommandId, match.Session.Value);
                     await output.WriteAsync(ProtocolError(
                         ProtocolErrorCode.MalformedMessage,
                         "The command payload is not supported."),
@@ -174,6 +186,7 @@ public sealed class GameMatchmakingGrpcService(
                     .ConfigureAwait(false);
                 if (!result.Accepted)
                 {
+                    logger.LogWarning("Command {CommandId} rejected for {SessionId} with code {RejectionCode}.", applicationCommand.CommandId, match.Session.Value, result.RejectionCode);
                     await output.WriteAsync(ToRejected(result, match), cancellationToken)
                         .ConfigureAwait(false);
                     continue;
@@ -181,6 +194,7 @@ public sealed class GameMatchmakingGrpcService(
 
                 await output.WriteAsync(ToAccepted(applicationCommand.CommandId, match), cancellationToken)
                     .ConfigureAwait(false);
+                logger.LogDebug("Command {CommandId} accepted for {SessionId}.", applicationCommand.CommandId, match.Session.Value);
 
                 if (applicationCommand is ReadyUpCommand)
                 {
@@ -215,11 +229,14 @@ public sealed class GameMatchmakingGrpcService(
         if (!matchmaking.TrySubscribe(match.Session, cancellationToken, out var events) ||
             events is null)
         {
+            logger.LogWarning("Unable to subscribe to events for {SessionId}.", match.Session.Value);
             return;
         }
 
+        logger.LogDebug("Forwarding session events for {SessionId}.", match.Session.Value);
         await foreach (var @event in events.WithCancellation(cancellationToken))
         {
+            logger.LogTrace("Forwarding event sequence {EventSequence} for {SessionId}.", @event.Sequence, match.Session.Value);
             await output.WriteAsync(ToServerEvent(@event, match), cancellationToken)
                 .ConfigureAwait(false);
         }

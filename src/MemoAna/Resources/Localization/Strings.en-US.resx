@@ -120,4 +120,16 @@
   <data name="ExampleString" xml:space="preserve">
     <value>Example</value>
   </data>
+  <data name="HostStartedString" xml:space="preserve">
+    <value>MemoAna host is ready to accept requests.</value>
+  </data>
+  <data name="HostConfiguringString" xml:space="preserve">
+    <value>MemoAna host was built and endpoints are being configured.</value>
+  </data>
+  <data name="HostStoppingString" xml:space="preserve">
+    <value>MemoAna host is shutting down.</value>
+  </data>
+  <data name="HostFailureString" xml:space="preserve">
+    <value>MemoAna host terminated because of an unhandled startup or hosting failure.</value>
+  </data>
 </root>

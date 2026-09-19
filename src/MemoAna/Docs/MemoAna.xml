@@ -31,7 +31,7 @@
             <summary>Provides process-local, thread-safe matchmaking and session lookup.</summary>
             <remarks>Pairing is serialized under a private gate; session command mutation remains serialized by each session runtime.</remarks>
         </member>
-        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.#ctor(MemoAna.Application.Matchmaking.IMatchSessionRuntimeFactory,MemoAna.Application.Matchmaking.IServerMatchmakingIdentityGenerator,MemoAna.Application.Matchmaking.IMatchmakingCompatibilityPolicy,MemoAna.Application.Matchmaking.MatchmakingOptions)">
+        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.#ctor(MemoAna.Application.Matchmaking.IMatchSessionRuntimeFactory,MemoAna.Application.Matchmaking.IServerMatchmakingIdentityGenerator,MemoAna.Application.Matchmaking.IMatchmakingCompatibilityPolicy,MemoAna.Application.Matchmaking.MatchmakingOptions,Microsoft.Extensions.Logging.ILogger{MemoAna.Application.Matchmaking.InMemoryMatchmaking})">
             <summary>
             Initializes a new instance of the <see cref="T:MemoAna.Application.Matchmaking.InMemoryMatchmaking"/> class.
             </summary>
@@ -39,6 +39,7 @@
             <param name="identityGenerator">Server Identity Generator</param>
             <param name="compatibilityPolicy">Compatibility Policy</param>
             <param name="options">Matchmaking Options</param>
+            <param name="logger">Optional logger used to record matchmaking lifecycle events.</param>
             <exception cref="T:System.ArgumentNullException">thrown when param runtimeFactory null</exception>
         </member>
         <member name="P:MemoAna.Application.Matchmaking.InMemoryMatchmaking.WaitingCount">
@@ -954,6 +955,9 @@
         <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.AddApplication(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
             <inheritdoc cref="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddApplication"/>
         </member>
+        <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.AddLogging(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
+            <inheritdoc cref="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddLogging"/>
+        </member>
         <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.AddInfrastructure(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
             <inheritdoc cref="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddInfrastructure"/>
         </member>
@@ -962,6 +966,10 @@
         </member>
         <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddApplication">
             <summary>Registers application services, matchmaking, and localization.</summary>
+            <returns>The same builder instance for fluent configuration.</returns>
+        </member>
+        <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddLogging">
+            <summary>Configures Serilog as the provider behind the application's <see cref="T:Microsoft.Extensions.Logging.ILogger`1"/> abstraction.</summary>
             <returns>The same builder instance for fluent configuration.</returns>
         </member>
         <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddInfrastructure">
@@ -1020,7 +1028,7 @@
         <member name="T:MemoAna.Infrastructure.Sessions.SessionRuntimeFactory">
             <summary>Creates runtime handles backed by the session runtime registry.</summary>
         </member>
-        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeFactory.#ctor(MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry)">
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeFactory.#ctor(MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry,Microsoft.Extensions.Logging.ILogger{MemoAna.Infrastructure.Sessions.SessionRuntimeFactory})">
             <summary>Creates runtime handles backed by the session runtime registry.</summary>
         </member>
         <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeFactory.CreateAsync(MemoAna.Domain.Matchmaking.SessionIdentity,MemoAna.Domain.Matchmaking.MatchIdentity,System.Threading.CancellationToken)">
@@ -1044,10 +1052,12 @@
             <summary>Owns the process-local collection of active authoritative session runtimes.</summary>
             <remarks>Runtime removal is callback-driven so terminal sessions do not remain registered after processing stops.</remarks>
         </member>
-        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry.#ctor(MemoAna.Infrastructure.Sessions.SessionRuntimeOptions,System.Threading.CancellationToken)">
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry.#ctor(MemoAna.Infrastructure.Sessions.SessionRuntimeOptions,System.Threading.CancellationToken,Microsoft.Extensions.Logging.ILogger{MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry},Microsoft.Extensions.Logging.ILoggerFactory)">
             <summary>Initializes the registry.</summary>
             <param name="options">Optional runtime capacity configuration.</param>
             <param name="cancellationToken">Token that stops all runtimes owned by the registry.</param>
+            <param name="logger">Optional logger used to record registry lifecycle events.</param>
+            <param name="loggerFactory">Optional factory used to create runtime loggers.</param>
         </member>
         <member name="P:MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry.Count">
             <summary>Gets the number of active runtimes.</summary>
@@ -1080,7 +1090,7 @@
             <summary>Adapts the authoritative matchmaking/session application boundary to the bidirectional gRPC protocol.</summary>
             <remarks>This adapter validates transport input, maps protobuf messages to domain commands, and publishes authoritative events without owning domain state.</remarks>
         </member>
-        <member name="M:MemoAna.Presentation.Grpc.GameMatchmakingGrpcService.#ctor(MemoAna.Application.Matchmaking.IMatchmakingSessionGateway)">
+        <member name="M:MemoAna.Presentation.Grpc.GameMatchmakingGrpcService.#ctor(MemoAna.Application.Matchmaking.IMatchmakingSessionGateway,Microsoft.Extensions.Logging.ILogger{MemoAna.Presentation.Grpc.GameMatchmakingGrpcService})">
             <summary>Adapts the authoritative matchmaking/session application boundary to the bidirectional gRPC protocol.</summary>
             <remarks>This adapter validates transport input, maps protobuf messages to domain commands, and publishes authoritative events without owning domain state.</remarks>
         </member>

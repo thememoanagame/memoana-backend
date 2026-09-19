@@ -120,4 +120,16 @@
   <data name="ExampleString" xml:space="preserve">
     <value>Exemplo</value>
   </data>
+  <data name="HostStartedString" xml:space="preserve">
+    <value>O host do MemoAna está pronto para aceitar solicitações.</value>
+  </data>
+  <data name="HostConfiguringString" xml:space="preserve">
+    <value>O host do MemoAna foi criado e os endpoints estão sendo configurados.</value>
+  </data>
+  <data name="HostStoppingString" xml:space="preserve">
+    <value>O host do MemoAna está sendo encerrado.</value>
+  </data>
+  <data name="HostFailureString" xml:space="preserve">
+    <value>O host do MemoAna foi encerrado devido a uma falha não tratada de inicialização ou hospedagem.</value>
+  </data>
 </root>

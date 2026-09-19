@@ -121,4 +121,20 @@
     <value>Exemplo</value>
     <comment>String de exemplo</comment>
   </data>
+  <data name="HostStartedString" xml:space="preserve">
+    <value>MemoAna host is ready to accept requests.</value>
+    <comment>Operator-facing message emitted when the host is ready.</comment>
+  </data>
+  <data name="HostConfiguringString" xml:space="preserve">
+    <value>MemoAna host was built and endpoints are being configured.</value>
+    <comment>Operator-facing message emitted while host endpoints are configured.</comment>
+  </data>
+  <data name="HostStoppingString" xml:space="preserve">
+    <value>MemoAna host is shutting down.</value>
+    <comment>Operator-facing message emitted during graceful host shutdown.</comment>
+  </data>
+  <data name="HostFailureString" xml:space="preserve">
+    <value>MemoAna host terminated because of an unhandled startup or hosting failure.</value>
+    <comment>Operator-facing message emitted for a fatal host failure.</comment>
+  </data>
 </root>

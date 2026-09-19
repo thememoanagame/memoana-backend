@@ -1,11 +1,16 @@
 using MemoAna.Application.Matchmaking;
 using MemoAna.Domain.Matchmaking;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MemoAna.Infrastructure.Sessions;
 
 /// <summary>Creates runtime handles backed by the session runtime registry.</summary>
-public sealed class SessionRuntimeFactory(SessionRuntimeRegistry registry) : IMatchSessionRuntimeFactory
+public sealed class SessionRuntimeFactory(
+    SessionRuntimeRegistry registry,
+    ILogger<SessionRuntimeFactory>? logger = null) : IMatchSessionRuntimeFactory
 {
+    private readonly ILogger<SessionRuntimeFactory> _logger = logger ?? NullLogger<SessionRuntimeFactory>.Instance;
     /// <summary>Creates a new authoritative runtime for the specified session.</summary>
     /// <param name="session">The session identity.</param>
     /// <param name="match">The match identity.</param>
@@ -15,6 +20,7 @@ public sealed class SessionRuntimeFactory(SessionRuntimeRegistry registry) : IMa
     public Task<IMatchSessionRuntime> CreateAsync(SessionIdentity session, MatchIdentity match, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        _logger.LogDebug("Creating session runtime for {SessionId} and {MatchId}.", session.Value, match.Value);
         return Task.FromResult<IMatchSessionRuntime>(new SessionRuntimeHandle(registry.Create(session, match)));
     }
 

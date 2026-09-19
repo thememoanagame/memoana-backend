@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using MemoAna.Domain.Sessions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MemoAna.Infrastructure.Sessions;
 
@@ -17,17 +19,20 @@ public sealed class SessionRuntime : IAsyncDisposable
     private readonly Task _processor;
     private long _nextSubscriberId;
     private int _shutdownStarted;
+    private readonly ILogger<SessionRuntime> _logger;
 
     internal SessionRuntime(
         MatchSession session,
         SessionRuntimeOptions options,
         Action<SessionRuntime> closed,
-        CancellationToken runtimeCancellation)
+        CancellationToken runtimeCancellation,
+        ILogger<SessionRuntime>? logger = null)
     {
         Session = session ?? throw new ArgumentNullException(nameof(session));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _options.Validate();
         _closed = closed ?? throw new ArgumentNullException(nameof(closed));
+        _logger = logger ?? NullLogger<SessionRuntime>.Instance;
 
         _commands = Channel.CreateBounded<PendingCommand>(new BoundedChannelOptions(_options.CommandCapacity)
         {
@@ -38,6 +43,7 @@ public sealed class SessionRuntime : IAsyncDisposable
         });
 
         _lifecycleCancellation = CancellationTokenSource.CreateLinkedTokenSource(runtimeCancellation);
+        _logger.LogInformation("Session runtime started for {SessionId} and {MatchId}.", Session.Session.Value, Session.Match?.Value);
         _processor = ProcessCommandsAsync();
     }
 
@@ -63,6 +69,7 @@ public sealed class SessionRuntime : IAsyncDisposable
         ThrowIfClosed();
 
         var pending = new PendingCommand(command);
+        _logger.LogDebug("Submitting command {CommandId} to session {SessionId}.", command.CommandId, Session.Session.Value);
         try
         {
             await _commands.Writer.WriteAsync(pending, cancellationToken).ConfigureAwait(false);
@@ -90,6 +97,7 @@ public sealed class SessionRuntime : IAsyncDisposable
         });
 
         var subscriber = AddSubscriber(channel);
+        _logger.LogDebug("Event subscriber {SubscriberId} registered for session {SessionId}.", subscriber.Id, Session.Session.Value);
         return ReadEventsAsync(subscriber, cancellationToken);
     }
 
@@ -166,7 +174,8 @@ public sealed class SessionRuntime : IAsyncDisposable
                 try
                 {
                     var result = Session.Handle(pending.Command);
-                    await PublishAsync(result.Events).ConfigureAwait(false);
+                        _logger.LogDebug("Command {CommandId} processed for {SessionId}: accepted={Accepted}, events={EventCount}.", pending.Command.CommandId, Session.Session.Value, result.Accepted, result.Events.Count);
+                        await PublishAsync(result.Events).ConfigureAwait(false);
                     pending.Completion.TrySetResult(result);
 
                     if (result.Accepted && Session.State.IsTerminal())
@@ -176,6 +185,7 @@ public sealed class SessionRuntime : IAsyncDisposable
                 }
                 catch (Exception exception)
                 {
+                    _logger.LogError(exception, "Command {CommandId} failed while processing session {SessionId}.", pending.Command.CommandId, Session.Session.Value);
                     pending.Completion.TrySetException(exception);
                     throw;
                 }
@@ -183,6 +193,7 @@ public sealed class SessionRuntime : IAsyncDisposable
         }
         catch (OperationCanceledException) when (_lifecycleCancellation.IsCancellationRequested)
         {
+            _logger.LogInformation("Session runtime cancellation requested for {SessionId}.", Session.Session.Value);
             CompletePendingCommands();
         }
         finally
@@ -191,6 +202,7 @@ public sealed class SessionRuntime : IAsyncDisposable
             CompleteSubscribers();
             Interlocked.Exchange(ref _shutdownStarted, 1);
             _closed(this);
+            _logger.LogInformation("Session runtime completed for {SessionId}.", Session.Session.Value);
         }
     }
 
@@ -209,6 +221,7 @@ public sealed class SessionRuntime : IAsyncDisposable
 
         foreach (var @event in events)
         {
+            _logger.LogTrace("Publishing event {EventType} sequence {EventSequence} for {SessionId}.", @event.GetType().Name, @event.Sequence, Session.Session.Value);
             foreach (var subscriber in subscribers)
             {
                 try
@@ -218,6 +231,7 @@ public sealed class SessionRuntime : IAsyncDisposable
                 }
                 catch (ChannelClosedException)
                 {
+                    _logger.LogWarning("Subscriber channel closed while publishing event sequence {EventSequence} for {SessionId}.", @event.Sequence, Session.Session.Value);
                     RemoveSubscriber(new Subscriber(0, subscriber));
                 }
             }
@@ -233,6 +247,7 @@ public sealed class SessionRuntime : IAsyncDisposable
 
         _commands.Writer.TryComplete();
         _lifecycleCancellation.Cancel();
+        _logger.LogInformation("Session runtime shutdown started for {SessionId}.", Session.Session.Value);
     }
 
     private void CompletePendingCommands()
