@@ -105,7 +105,7 @@
       Lines="  Branch coverage: $(QualityGateBranchCoverage)%"
       Overwrite="false"
       Encoding="UTF-8"
-      Condition="'$(QualityGateTextContent.Contains('Branch coverage:'))' == 'False'" />
+      Condition="'$(QualityGateHasBranchCoverage)' != 'True'" />
 
     <Message Importance="High" Text="Line Coverage:    $(QualityGateLineCoverage)% [PASSED]" Condition="'$(QualityGateLineCoverage)' &gt;= '$(QualityGateThreshold)'" />
     <Message Importance="High" Text="Line Coverage:    $(QualityGateLineCoverage)% [FAILED]" Condition="'$(QualityGateLineCoverage)' &lt; '$(QualityGateThreshold)'" />
