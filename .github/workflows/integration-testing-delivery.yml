@@ -146,7 +146,7 @@ jobs:
 
         if ($failed) {
             $summaryText =$failures -join " "
-            Write-Error "Quality Gate failed: $summaryText"
+            Write-Warning "Quality Gate failed: $summaryText"
             exit 1
         }
 
