@@ -64,7 +64,7 @@ jobs:
       env:
         QUALITY_GRADE_THRESHOLD: 80
       run: |
-        $summaryFile = Join-Path ${{ env.TEST_RESULTS_DIR }} "QualityGate/Summary.txt"
+        $summaryFile = Join-Path ${{ env.TEST_RESULTS_DIR }} "QualityGate/Report/Summary.txt"
         if (-not (Test-Path $summaryFile)) {
             "## Coverage gate`n`nThe ReportGenerator Summary.txt report was not produced." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             Write-Error "Summary coverage data was not produced."
@@ -106,7 +106,8 @@ jobs:
 
         # Status visuais para o resumo
         $lineStatus = if ($lineRate -ge$threshold) { '✅' } else { '❌' }
-        $branchStatus = if ($branchRate -ge $threshold) { '✅' } else { '❌' }$methodStatus = if ($methodRate -ge$threshold) { '✅' } else { '❌' }
+        $branchStatus = if ($branchRate -ge $threshold) { '✅' } else { '❌' }
+        $methodStatus = if ($methodRate -ge$threshold) { '✅' } else { '❌' }
 
         # Escrevendo no Summary do GitHub Actions
         @"
