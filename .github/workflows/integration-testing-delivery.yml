@@ -71,11 +71,15 @@ jobs:
       run: |
         $coverageFiles = @(Resolve-Path "${{ env.TEST_RESULTS_DIR }}/QualityGate/coverage*.xml') 
         if ($coverageFiles.Count -gt 0) {
-          dotnet tool run reportgenerator -reports:"./${{ env.TEST_RESULTS_DIR }}/QualityGate/*.xml" -targetdir:"./${{ env.TEST_RESULTS_DIR }}/QualityGate" "-reporttypes:Markdown;cobertura" "-assemblyfilters:+MemoAna.Backend*;-FluentValidation*;-Mediator*" "-classfilters:+*;-AspNetCoreGeneratedDocument*;-*Components*;-*.Components.*;-*.Pages.*;-*.Layout.*;-*.Shared.*;-*.Migrations.*" "-filefilters:-**/*.razor;-**/*.razor.cs;-**/obj/**/*.cs;-**/*.g.cs;-**/*LoggerMessageGenerator*/*"
+          dotnet tool run reportgenerator -reports:"${{ env.TEST_RESULTS_DIR }}/QualityGate/*.xml" -targetdir:"${{ env.TEST_RESULTS_DIR }}/QualityGate" "-reporttypes:MarkdownSummary;TextSummary;cobertura" "-assemblyfilters:+MemoAna.Backend*;-FluentValidation*;-Mediator*" "-classfilters:+*;-AspNetCoreGeneratedDocument*;-*Components*;-*.Components.*;-*.Pages.*;-*.Layout.*;-*.Shared.*;-*.Migrations.*" "-filefilters:-**/*.razor;-**/*.razor.cs;-**/obj/**/*.cs;-**/*.g.cs;-**/*LoggerMessageGenerator*/*"
         } else {
-          "# Coverage report unavailable`n`nCoverlet did not produce a coverage XML file." | Out-File ${{ env.TEST_RESULTS_DIR }}/QualityGate/coverage/Summary.md -Encoding utf8
+          "# Coverage report unavailable`n`nCoverlet did not produce a coverage XML file." | Out-File ${{ env.TEST_RESULTS_DIR }}/QualityGate/Summary.md -Encoding utf8
         }
-
+  
+    - name: Debug generated artifacts
+      run: |
+        ls -R ${{ env.TEST_RESULTS_DIR }}
+  
     - name: Enforce 80 percent line and branch coverage
       if: always()
       shell: pwsh
