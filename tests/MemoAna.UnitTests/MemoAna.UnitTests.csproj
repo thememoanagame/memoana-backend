@@ -12,20 +12,20 @@
     <QualityGateReportDirectory>$(QualityGateResultsDirectory)/Report</QualityGateReportDirectory>
     <QualityGateMarkdownReport>$(QualityGateReportDirectory)/Summary.md</QualityGateMarkdownReport>
     <QualityGateTextReport>$(QualityGateReportDirectory)/Summary.txt</QualityGateTextReport>
-    <QualityGateCoveragePattern>$(QualityGateResultsDirectory)/**/coverage.cobertura.xml</QualityGateCoveragePattern>
+    <QualityGateCoveragePattern>$(QualityGateResultsDirectory)/coverage.cobertura.*.xml</QualityGateCoveragePattern>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.MTP" Version="8.0.1">
+    <PackageReference Include="coverlet.MTP" Version="10.0.1">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.76.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.3.3">
+    <PackageReference Include="Grpc.Net.Client" Version="2.83.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.4.1">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="xunit.v3" Version="4.0.0" />
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -49,33 +49,21 @@
     <RemoveDir Directories="$(QualityGateResultsDirectory)" />
     <MakeDir Directories="$(QualityGateResultsDirectory)" />
 
-    <Exec
-      Command="dotnet test &quot;$(MSBuildProjectFullPath)&quot; --no-build --configuration &quot;$(Configuration)&quot; --results-directory &quot;$(QualityGateResultsDirectory)&quot;"
-      ContinueOnError="true">
+    <Exec Command="dotnet test &quot;$(MSBuildProjectFullPath)&quot; --no-build --configuration &quot;$(Configuration)&quot; --results-directory &quot;$(QualityGateResultsDirectory)&quot;" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="QualityGateTestExitCode" />
     </Exec>
 
-    <Error
-      Condition="'$(QualityGateTestExitCode)' != '0'"
-      Text="Quality Gate aborted: unit tests failed with exit code $(QualityGateTestExitCode)." />
+    <Error Condition="'$(QualityGateTestExitCode)' != '0'" Text="Quality Gate aborted: unit tests failed with exit code $(QualityGateTestExitCode)." />
 
-    <Exec
-      Command="dotnet tool run reportgenerator -reports:&quot;$(QualityGateCoveragePattern)&quot; -targetdir:&quot;$(QualityGateReportDirectory)&quot; -reporttypes:MarkdownSummary;TextSummary -assemblyfilters:&quot;+MemoAna*;-FluentValidation*;-Mediator*&quot; -minimumCoverageThresholds:lineCoverage=$(QualityGateThreshold) -minimumCoverageThresholds:branchCoverage=$(QualityGateThreshold)"
-      ContinueOnError="true">
+    <Exec Command="dotnet tool run reportgenerator -reports:&quot;$(QualityGateCoveragePattern)&quot; -targetdir:&quot;$(QualityGateReportDirectory)&quot; -reporttypes:MarkdownSummary;TextSummary -assemblyfilters:&quot;+MemoAna*;-FluentValidation*;-Mediator*&quot; -minimumCoverageThresholds:lineCoverage=$(QualityGateThreshold) -minimumCoverageThresholds:branchCoverage=$(QualityGateThreshold)" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="QualityGateReportGeneratorExitCode" />
     </Exec>
 
-    <Error
-      Condition="'$(QualityGateReportGeneratorExitCode)' != '0' and !Exists('$(QualityGateMarkdownReport)')"
-      Text="Quality Gate aborted: ReportGenerator failed with exit code $(QualityGateReportGeneratorExitCode) and did not produce the Markdown report." />
+    <Error Condition="'$(QualityGateReportGeneratorExitCode)' != '0' and !Exists('$(QualityGateMarkdownReport)')" Text="Quality Gate aborted: ReportGenerator failed with exit code $(QualityGateReportGeneratorExitCode) and did not produce the Markdown report." />
 
-    <Error
-      Condition="!Exists('$(QualityGateMarkdownReport)')"
-      Text="Quality Gate aborted: Markdown coverage report was not found at $(QualityGateMarkdownReport)." />
+    <Error Condition="!Exists('$(QualityGateMarkdownReport)')" Text="Quality Gate aborted: Markdown coverage report was not found at $(QualityGateMarkdownReport)." />
 
-    <Error
-      Condition="!Exists('$(QualityGateTextReport)')"
-      Text="Quality Gate aborted: Text coverage report was not found at $(QualityGateTextReport)." />
+    <Error Condition="!Exists('$(QualityGateTextReport)')" Text="Quality Gate aborted: Text coverage report was not found at $(QualityGateTextReport)." />
 
     <PropertyGroup>
       <QualityGateTextContent>$([System.IO.File]::ReadAllText('$(QualityGateTextReport)'))</QualityGateTextContent>
@@ -87,9 +75,7 @@
       <QualityGateHasBranchCoverage>$([System.Text.RegularExpressions.Regex]::IsMatch($(QualityGateTextContent), '(?im)^\s*Branch coverage:\s*[0-9]+(?:\.[0-9]+)?%'))</QualityGateHasBranchCoverage>
     </PropertyGroup>
 
-    <Error
-      Condition="'$(QualityGateLineCoverage)' == '' or '$(QualityGateMethodCoverage)' == '' or '$(QualityGateCoveredBranches)' == '' or '$(QualityGateTotalBranches)' == ''"
-      Text="Quality Gate aborted: unable to extract line, branch and method coverage data from $(QualityGateTextReport)." />
+    <Error Condition="'$(QualityGateLineCoverage)' == '' or '$(QualityGateMethodCoverage)' == '' or '$(QualityGateCoveredBranches)' == '' or '$(QualityGateTotalBranches)' == ''" Text="Quality Gate aborted: unable to extract line, branch and method coverage data from $(QualityGateTextReport)." />
 
     <PropertyGroup Condition="'$(QualityGateBranchCoverage)' == '' and '$(QualityGateTotalBranches)' == '0'">
       <QualityGateBranchCoverage>100</QualityGateBranchCoverage>
@@ -99,16 +85,9 @@
       <QualityGateBranchCoverage>$([System.Math]::Round($([System.Double]::Parse('$(QualityGateCoveredBranches)')) * 100 / $([System.Double]::Parse('$(QualityGateTotalBranches)')), 1))</QualityGateBranchCoverage>
     </PropertyGroup>
 
-    <Error
-      Condition="'$(QualityGateBranchCoverage)' == ''"
-      Text="Quality Gate aborted: unable to calculate branch coverage from Covered branches and Total branches in $(QualityGateTextReport)." />
+    <Error Condition="'$(QualityGateBranchCoverage)' == ''" Text="Quality Gate aborted: unable to calculate branch coverage from Covered branches and Total branches in $(QualityGateTextReport)." />
 
-    <WriteLinesToFile
-      File="$(QualityGateTextReport)"
-      Lines="  Branch coverage: $(QualityGateBranchCoverage)%"
-      Overwrite="false"
-      Encoding="UTF-8"
-      Condition="'$(QualityGateHasBranchCoverage)' != 'True'" />
+    <WriteLinesToFile File="$(QualityGateTextReport)" Lines="  Branch coverage: $(QualityGateBranchCoverage)%" Overwrite="false" Encoding="UTF-8" Condition="'$(QualityGateHasBranchCoverage)' != 'True'" />
 
     <PropertyGroup>
       <QualityGateLineFailed Condition="'$(QualityGateLineCoverage)' &lt; '$(QualityGateThreshold)'">true</QualityGateLineFailed>
@@ -116,20 +95,11 @@
       <QualityGateMethodFailed Condition="'$(QualityGateMethodCoverage)' &lt; '$(QualityGateThreshold)'">true</QualityGateMethodFailed>
     </PropertyGroup>
 
-    <Warning
-      Code="QG001"
-      Text="Line coverage below threshold: $(QualityGateLineCoverage)% &lt; $(QualityGateThreshold)%."
-      Condition="'$(QualityGateLineFailed)' == 'true'" />
+    <Warning Code="QG001" Text="Line coverage below threshold: $(QualityGateLineCoverage)% &lt; $(QualityGateThreshold)%." Condition="'$(QualityGateLineFailed)' == 'true'" />
 
-    <Warning
-      Code="QG002"
-      Text="Branch coverage below threshold: $(QualityGateBranchCoverage)% &lt; $(QualityGateThreshold)%."
-      Condition="'$(QualityGateBranchFailed)' == 'true'" />
+    <Warning Code="QG002" Text="Branch coverage below threshold: $(QualityGateBranchCoverage)% &lt; $(QualityGateThreshold)%." Condition="'$(QualityGateBranchFailed)' == 'true'" />
 
-    <Warning
-      Code="QG003"
-      Text="Method coverage below threshold: $(QualityGateMethodCoverage)% &lt; $(QualityGateThreshold)%."
-      Condition="'$(QualityGateMethodFailed)' == 'true'" />
+    <Warning Code="QG003" Text="Method coverage below threshold: $(QualityGateMethodCoverage)% &lt; $(QualityGateThreshold)%." Condition="'$(QualityGateMethodFailed)' == 'true'" />
 
     <PropertyGroup>
       <QualityGateFailureCount>0</QualityGateFailureCount>
@@ -151,41 +121,23 @@
       <QualityGateFailureSummary Condition="'$(QualityGateFailureCount)' == '3'">Line coverage $(QualityGateLineCoverage)%, branch coverage $(QualityGateBranchCoverage)% and method coverage $(QualityGateMethodCoverage)% are below the required $(QualityGateThreshold)%.</QualityGateFailureSummary>
     </PropertyGroup>
 
-    <Message
-      Importance="High"
-      Text="Line Coverage:    $(QualityGateLineCoverage)% [PASSED]"
-      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
+    <Message Importance="High" Text="Line Coverage:    $(QualityGateLineCoverage)% [PASSED]" Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
 
-    <Message
-      Importance="High"
-      Text="Branch Coverage:  $(QualityGateBranchCoverage)% [PASSED]"
-      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
+    <Message Importance="High" Text="Branch Coverage:  $(QualityGateBranchCoverage)% [PASSED]" Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
 
-    <Message
-      Importance="High"
-      Text="Method Coverage:  $(QualityGateMethodCoverage)% [PASSED]"
-      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
+    <Message Importance="High" Text="Method Coverage:  $(QualityGateMethodCoverage)% [PASSED]" Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
 
-    <Message
-      Importance="High"
-      Text="Required:         $(QualityGateThreshold).00%"
-      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
+    <Message Importance="High" Text="Required:         $(QualityGateThreshold).00%" Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
 
-    <Message
-      Importance="High"
-      Text="QUALITY GATE: PASSED"
-      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
+    <Message Importance="High" Text="QUALITY GATE: PASSED" Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' == '0'" />
 
-    <Error
-      Condition="'$(QualityGateFailureCount)' != '0'"
-      Text="Quality Gate failed: $(QualityGateFailureSummary)" />
+    <Error Condition="'$(QualityGateFailureCount)' != '0'" Text="Quality Gate failed: $(QualityGateFailureSummary)" />
 
-    <Error
-      Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' != '0'"
-      Text="Quality Gate failed: ReportGenerator exited with code $(QualityGateReportGeneratorExitCode)." />
+    <Error Condition="'$(QualityGateFailureCount)' == '0' and '$(QualityGateReportGeneratorExitCode)' != '0'" Text="Quality Gate failed: ReportGenerator exited with code $(QualityGateReportGeneratorExitCode)." />
 
     <Message Importance="High" Text="============================================================" />
 
+    <Exec Command="rm -r -Force &quot;$(MSBuildProjectFullPath)\TestResults\*&quot;" ContinueOnError="true" />
   </Target>
 
 </Project>

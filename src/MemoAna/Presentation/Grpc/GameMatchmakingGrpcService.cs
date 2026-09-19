@@ -221,7 +221,7 @@ public sealed class GameMatchmakingGrpcService(
     {
         await foreach (var @event in input.ReadAllAsync(cancellationToken))
         {
-            await response.WriteAsync(@event).ConfigureAwait(false);
+            await response.WriteAsync(@event, cancellationToken).ConfigureAwait(false);
         }
     }
 
