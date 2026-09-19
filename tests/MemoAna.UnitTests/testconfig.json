@@ -1,0 +1,30 @@
+{
+    "platformOptions": {
+        "coverlet": {
+            "include": "[MemoAna]*,[MemoAna.Application]*,[MemoAna.Domain]*,[MemoAna.Infrastructure]*",
+            "exclude": [
+                "[MemoAna.UnitTests]*",
+                "[FluentValidation]*",
+                "[Mediator]*",
+                "[Xunit]*",
+                "[Microsoft.*]*"
+            ],
+            "excludeByAttribute": [
+                "GeneratedCodeAttribute",
+                "ExcludeFromCodeCoverageAttribute",
+                "CompilerGeneratedAttribute"
+            ],
+            "excludeByFile": [
+                "**/*.g.cs",
+                "**/*.g.i.cs",
+                "**/*.razor",
+                "**/*.razor.cs",
+                "**/obj/**/*.cs",
+                "**/*LoggerMessage*.cs"
+            ],
+            "format": "cobertura",
+            "includeTestAssembly": false,
+            "excludeAssembliesWithoutSources": "MissingAll"
+        }
+    }
+}
