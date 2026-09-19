@@ -79,7 +79,7 @@
       <QualityGateTextContent>$([System.IO.File]::ReadAllText('$(QualityGateTextReport)'))</QualityGateTextContent>
       <QualityGateLineCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateTextContent), '(?im)^\s*Line coverage:\s*([0-9]+(?:\.[0-9]+)?)%').Groups[1].Value)</QualityGateLineCoverage>
       <QualityGateMethodCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateTextContent), '(?im)^\s*Method coverage:\s*([0-9]+(?:\.[0-9]+)?)%').Groups[1].Value)</QualityGateMethodCoverage>
-      <QualityGateBranchCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateTextContent), '(?im)^\s*Branch coverage:\s*([0-9]+(?:\.[0-9]+)?)%').Groups[1].Value)
+      <QualityGateBranchCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateTextContent), '(?im)^\s*Branch coverage:\s*([0-9]+(?:\.[0-9]+)?)%').Groups[1].Value)</QualityGateBranchCoverage>
       <QualityGateCoveredBranches>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateTextContent), '(?im)^\s*Covered branches:\s*([0-9]+)').Groups[1].Value)</QualityGateCoveredBranches>
       <QualityGateTotalBranches>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateTextContent), '(?im)^\s*Total branches:\s*([0-9]+)').Groups[1].Value)</QualityGateTotalBranches>
     </PropertyGroup>
@@ -100,15 +100,12 @@
       Condition="'$(QualityGateBranchCoverage)' == ''"
       Text="Quality Gate aborted: unable to calculate branch coverage from Covered branches and Total branches in $(QualityGateTextReport)." />
 
-    <PropertyGroup>
-      <QualityGateNormalizedText>$([System.Text.RegularExpressions.Regex]::Replace($(QualityGateTextContent), '(?im)(^\s*Line coverage:\s*[0-9]+(?:\.[0-9]+)?%\s*$)', '$1' + $([System.Environment]::NewLine) + '  Branch coverage: $(QualityGateBranchCoverage)%'))</QualityGateNormalizedText>
-    </PropertyGroup>
-
     <WriteLinesToFile
       File="$(QualityGateTextReport)"
-      Lines="$(QualityGateNormalizedText)"
-      Overwrite="true"
-      Encoding="UTF-8" />
+      Lines="  Branch coverage: $(QualityGateBranchCoverage)%"
+      Overwrite="false"
+      Encoding="UTF-8"
+      Condition="'$(QualityGateTextContent.Contains('Branch coverage:'))' == 'False'" />
 
     <Message Importance="High" Text="Line Coverage:    $(QualityGateLineCoverage)% [PASSED]" Condition="'$(QualityGateLineCoverage)' &gt;= '$(QualityGateThreshold)'" />
     <Message Importance="High" Text="Line Coverage:    $(QualityGateLineCoverage)% [FAILED]" Condition="'$(QualityGateLineCoverage)' &lt; '$(QualityGateThreshold)'" />
