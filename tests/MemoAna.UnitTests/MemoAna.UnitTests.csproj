@@ -11,6 +11,7 @@
     <QualityGateResultsDirectory>$(MSBuildProjectDirectory)/TestResults/QualityGate</QualityGateResultsDirectory>
     <QualityGateReportDirectory>$(QualityGateResultsDirectory)/Report</QualityGateReportDirectory>
     <QualityGateMarkdownReport>$(QualityGateReportDirectory)/Summary.md</QualityGateMarkdownReport>
+    <QualityGateTextReport>$(QualityGateReportDirectory)/Summary.txt</QualityGateTextReport>
     <QualityGateCoveragePattern>$(QualityGateResultsDirectory)/**/coverage.cobertura.xml</QualityGateCoveragePattern>
   </PropertyGroup>
 
@@ -57,7 +58,7 @@
       Text="Quality Gate aborted: unit tests failed with exit code $(QualityGateTestExitCode)." />
 
     <Exec
-      Command="dotnet tool run reportgenerator -reports:&quot;$(QualityGateCoveragePattern)&quot; -targetdir:&quot;$(QualityGateReportDirectory)&quot; -reporttypes:MarkdownSummary -minimumCoverageThresholds:lineCoverage=$(QualityGateThreshold) -minimumCoverageThresholds:branchCoverage=$(QualityGateThreshold)"
+      Command="dotnet tool run reportgenerator -reports:&quot;$(QualityGateCoveragePattern)&quot; -targetdir:&quot;$(QualityGateReportDirectory)&quot; -reporttypes:MarkdownSummary;TextSummary -minimumCoverageThresholds:lineCoverage=$(QualityGateThreshold) -minimumCoverageThresholds:branchCoverage=$(QualityGateThreshold)"
       ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="QualityGateReportGeneratorExitCode" />
     </Exec>
@@ -70,10 +71,14 @@
       Condition="!Exists('$(QualityGateMarkdownReport)')"
       Text="Quality Gate aborted: Markdown coverage report was not found at $(QualityGateMarkdownReport)." />
 
+    <Error
+      Condition="!Exists('$(QualityGateTextReport)')"
+      Text="Quality Gate aborted: Text coverage report was not found at $(QualityGateTextReport)." />
+
     <PropertyGroup>
-      <QualityGateMarkdownContent>$([System.IO.File]::ReadAllText('$(QualityGateMarkdownReport)'))</QualityGateMarkdownContent>
-      <QualityGateLineCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateMarkdownContent), '^\|\s*(?:\*\*)?Total(?:\*\*)?\s*\|\s*(?:\*\*)?([0-9]+(?:\.[0-9]+)?)%(?:\*\*)?\s*\|\s*(?:\*\*)?([0-9]+(?:\.[0-9]+)?)%', System.Text.RegularExpressions.RegexOptions.Multiline).Groups[1].Value)</QualityGateLineCoverage>
-      <QualityGateBranchCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateMarkdownContent), '^\|\s*(?:\*\*)?Total(?:\*\*)?\s*\|\s*(?:\*\*)?([0-9]+(?:\.[0-9]+)?)%(?:\*\*)?\s*\|\s*(?:\*\*)?([0-9]+(?:\.[0-9]+)?)%', System.Text.RegularExpressions.RegexOptions.Multiline).Groups[2].Value)</QualityGateBranchCoverage>
+      <QualityGateTextContent>$([System.IO.File]::ReadAllText('$(QualityGateTextReport)'))</QualityGateTextContent>
+      <QualityGateLineCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateTextContent), '(?im)^\s*Line coverage:\s*([0-9]+(?:\.[0-9]+)?)%').Groups[1].Value)</QualityGateLineCoverage>
+      <QualityGateBranchCoverage>$([System.Text.RegularExpressions.Regex]::Match($(QualityGateTextContent), '(?im)^\s*Branch coverage:\s*([0-9]+(?:\.[0-9]+)?)%').Groups[1].Value)</QualityGateBranchCoverage>
     </PropertyGroup>
 
     <Error
