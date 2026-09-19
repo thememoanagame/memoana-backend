@@ -1,4 +1,5 @@
 using MemoAna.Application.Localization;
+using MemoAna.Resources.Localization;
 using Microsoft.Extensions.Localization;
 
 namespace MemoAna.Infrastructure.Localization;

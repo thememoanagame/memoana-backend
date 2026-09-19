@@ -38,6 +38,14 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
     private readonly MatchmakingOptions _options;
     private int _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InMemoryMatchmaking"/> class.
+    /// </summary>
+    /// <param name="runtimeFactory">Match Session Factory</param>
+    /// <param name="identityGenerator">Server Identity Generator</param>
+    /// <param name="compatibilityPolicy">Compatibility Policy</param>
+    /// <param name="options">Matchmaking Options</param>
+    /// <exception cref="ArgumentNullException">thrown when param runtimeFactory null</exception>
     public InMemoryMatchmaking(
         IMatchSessionRuntimeFactory runtimeFactory,
         IServerMatchmakingIdentityGenerator? identityGenerator = null,

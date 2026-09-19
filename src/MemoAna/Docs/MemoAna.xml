@@ -1,0 +1,1442 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MemoAna</name>
+    </assembly>
+    <members>
+        <member name="T:MemoAna.Application.Localization.ILocalizer">
+            <summary>
+            Provides access to localized application strings by resource key.
+            </summary>
+            <remarks>
+            Implementations resolve the requested key using the current localization culture.
+            Missing-resource behavior follows the configured localization provider.
+            </remarks>
+        </member>
+        <member name="P:MemoAna.Application.Localization.ILocalizer.Item(System.String)">
+            <summary>
+            Gets the localized value associated with the specified resource key.
+            </summary>
+            <param name="key">The resource key to resolve.</param>
+            <returns>The localized resource value for the current culture.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when the underlying localization provider rejects a null key.</exception>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.MatchmakingOptions">
+            <summary>Configures the bounds of the in-memory matchmaking queue.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingOptions.MaximumWaitingPlayers">
+            <summary>Gets the maximum number of active waiting players.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.InMemoryMatchmaking">
+            <summary>Provides process-local, thread-safe matchmaking and session lookup.</summary>
+            <remarks>Pairing is serialized under a private gate; session command mutation remains serialized by each session runtime.</remarks>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.#ctor(MemoAna.Application.Matchmaking.IMatchSessionRuntimeFactory,MemoAna.Application.Matchmaking.IServerMatchmakingIdentityGenerator,MemoAna.Application.Matchmaking.IMatchmakingCompatibilityPolicy,MemoAna.Application.Matchmaking.MatchmakingOptions)">
+            <summary>
+            Initializes a new instance of the <see cref="T:MemoAna.Application.Matchmaking.InMemoryMatchmaking"/> class.
+            </summary>
+            <param name="runtimeFactory">Match Session Factory</param>
+            <param name="identityGenerator">Server Identity Generator</param>
+            <param name="compatibilityPolicy">Compatibility Policy</param>
+            <param name="options">Matchmaking Options</param>
+            <exception cref="T:System.ArgumentNullException">thrown when param runtimeFactory null</exception>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.InMemoryMatchmaking.WaitingCount">
+            <summary>Gets the number of currently waiting players.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.JoinAsync(MemoAna.Application.Matchmaking.JoinMatchmakingRequest,System.Threading.CancellationToken)">
+            <summary>Registers a player and either waits or completes a compatible pair.</summary>
+            <param name="request">The matchmaking request.</param>
+            <param name="cancellationToken">The token used to cancel the operation.</param>
+            <returns>The current matchmaking result.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="request"/> is null.</exception>
+            <exception cref="T:System.ArgumentException">Thrown when the request contains an invalid player key.</exception>
+            <exception cref="T:System.OperationCanceledException">Thrown when cancellation is requested.</exception>
+            <exception cref="T:System.ObjectDisposedException">Thrown when matchmaking has been disposed.</exception>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.CancelAsync(MemoAna.Application.Matchmaking.CancelMatchmakingRequest,System.Threading.CancellationToken)">
+            <summary>Cancels a player's active waiting request.</summary>
+            <param name="request">The cancellation request.</param>
+            <param name="cancellationToken">The token used to cancel the operation.</param>
+            <returns>The cancellation outcome.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="request"/> is null.</exception>
+            <exception cref="T:System.ArgumentException">Thrown when the player key is invalid.</exception>
+            <exception cref="T:System.OperationCanceledException">Thrown when cancellation is requested.</exception>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.WaitForMatchAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Waits for an active request to become matched.</summary>
+            <param name="playerKey">The player key to await.</param>
+            <param name="cancellationToken">The token used to cancel the wait.</param>
+            <returns>The current or eventual matchmaking result.</returns>
+            <exception cref="T:System.ArgumentException">Thrown when the player key is invalid.</exception>
+            <exception cref="T:System.OperationCanceledException">Thrown when cancellation is requested.</exception>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.TrySubscribe(MemoAna.Domain.Matchmaking.SessionIdentity,System.Threading.CancellationToken,System.Collections.Generic.IAsyncEnumerable{MemoAna.Domain.Sessions.SessionEvent}@)">
+            <summary>Attempts to subscribe to events from a matched session.</summary>
+            <param name="session">The session identity.</param>
+            <param name="cancellationToken">The token used to cancel subscription creation.</param>
+            <param name="events">The event stream when found.</param>
+            <returns><see langword="true"/> when the session exists.</returns>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.TryGetRuntime(MemoAna.Domain.Matchmaking.SessionIdentity,MemoAna.Application.Matchmaking.IMatchSessionRuntime@)">
+            <summary>Attempts to retrieve the runtime associated with a matched session.</summary>
+            <param name="session">The session identity.</param>
+            <param name="runtime">The runtime when found.</param>
+            <returns><see langword="true"/> when the runtime exists.</returns>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.DisposeAsync">
+            <summary>Stops matchmaking and completes all active waiting requests.</summary>
+            <returns>A value task that completes after active waiters are released.</returns>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.JoinMatchmakingRequest">
+            <summary>Describes a request to enter matchmaking.</summary>
+            <param name="PlayerKey">The caller-owned key used by the matchmaking boundary.</param>
+            <param name="CompatibilityKey">An optional key restricting compatible opponents.</param>
+            <param name="RequestId">An optional caller request identifier.</param>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.JoinMatchmakingRequest.#ctor(System.String,System.String,System.String)">
+            <summary>Describes a request to enter matchmaking.</summary>
+            <param name="PlayerKey">The caller-owned key used by the matchmaking boundary.</param>
+            <param name="CompatibilityKey">An optional key restricting compatible opponents.</param>
+            <param name="RequestId">An optional caller request identifier.</param>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.JoinMatchmakingRequest.PlayerKey">
+            <summary>The caller-owned key used by the matchmaking boundary.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.JoinMatchmakingRequest.CompatibilityKey">
+            <summary>An optional key restricting compatible opponents.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.JoinMatchmakingRequest.RequestId">
+            <summary>An optional caller request identifier.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.JoinMatchmakingRequest.EffectiveRequestId">
+            <summary>Gets the explicit request identifier, or <see cref="P:MemoAna.Application.Matchmaking.JoinMatchmakingRequest.PlayerKey"/> when omitted.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.JoinMatchmakingRequest.EffectiveCompatibilityKey">
+            <summary>Gets the explicit compatibility key, or the default compatibility group.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.CancelMatchmakingRequest">
+            <summary>Describes a request to cancel active matchmaking.</summary>
+            <param name="PlayerKey">The caller-owned matchmaking key.</param>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.CancelMatchmakingRequest.#ctor(System.String)">
+            <summary>Describes a request to cancel active matchmaking.</summary>
+            <param name="PlayerKey">The caller-owned matchmaking key.</param>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.CancelMatchmakingRequest.PlayerKey">
+            <summary>The caller-owned matchmaking key.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.MatchmakingStatus">
+            <summary>Describes the outcome state of a matchmaking request.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.MatchmakingStatus.Waiting">
+            <summary>The player is waiting for an opponent.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.MatchmakingStatus.Matched">
+            <summary>The player has been paired.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.MatchmakingStatus.AlreadyWaiting">
+            <summary>The player already has an active waiting request.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.MatchmakingStatus.AlreadyMatched">
+            <summary>The player already owns a match.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.MatchmakingStatus.Cancelled">
+            <summary>The waiting request was cancelled.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.MatchmakingStatus.NotFound">
+            <summary>No active request or match was found.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.MatchmakingStatus.Rejected">
+            <summary>The request could not be fulfilled.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.MatchmakingPlayerAssignment">
+            <summary>Describes a server-assigned player position in a match.</summary>
+            <param name="PlayerKey">The matchmaking key associated with the player.</param>
+            <param name="Player">The server-generated player identity.</param>
+            <param name="Slot">The one-based session slot.</param>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.MatchmakingPlayerAssignment.#ctor(System.String,MemoAna.Domain.Matchmaking.PlayerIdentity,System.Int32)">
+            <summary>Describes a server-assigned player position in a match.</summary>
+            <param name="PlayerKey">The matchmaking key associated with the player.</param>
+            <param name="Player">The server-generated player identity.</param>
+            <param name="Slot">The one-based session slot.</param>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingPlayerAssignment.PlayerKey">
+            <summary>The matchmaking key associated with the player.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingPlayerAssignment.Player">
+            <summary>The server-generated player identity.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingPlayerAssignment.Slot">
+            <summary>The one-based session slot.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.MatchFound">
+            <summary>Describes a complete match assignment from one player's perspective.</summary>
+            <param name="Match">The server-generated match identity.</param>
+            <param name="Session">The server-generated session identity.</param>
+            <param name="Self">The assignment belonging to the requesting player.</param>
+            <param name="Opponent">The opponent assignment.</param>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.MatchFound.#ctor(MemoAna.Domain.Matchmaking.MatchIdentity,MemoAna.Domain.Matchmaking.SessionIdentity,MemoAna.Application.Matchmaking.MatchmakingPlayerAssignment,MemoAna.Application.Matchmaking.MatchmakingPlayerAssignment)">
+            <summary>Describes a complete match assignment from one player's perspective.</summary>
+            <param name="Match">The server-generated match identity.</param>
+            <param name="Session">The server-generated session identity.</param>
+            <param name="Self">The assignment belonging to the requesting player.</param>
+            <param name="Opponent">The opponent assignment.</param>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchFound.Match">
+            <summary>The server-generated match identity.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchFound.Session">
+            <summary>The server-generated session identity.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchFound.Self">
+            <summary>The assignment belonging to the requesting player.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchFound.Opponent">
+            <summary>The opponent assignment.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.MatchmakingResult">
+            <summary>Contains the result of a matchmaking operation.</summary>
+            <param name="Status">The matchmaking outcome.</param>
+            <param name="PlayerKey">The associated matchmaking key.</param>
+            <param name="RequestId">The effective request identifier.</param>
+            <param name="Match">The match assignment when pairing succeeds.</param>
+            <param name="Reason">An optional human-readable explanation for a non-success outcome.</param>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.MatchmakingResult.#ctor(MemoAna.Application.Matchmaking.MatchmakingStatus,System.String,System.String,MemoAna.Application.Matchmaking.MatchFound,System.String)">
+            <summary>Contains the result of a matchmaking operation.</summary>
+            <param name="Status">The matchmaking outcome.</param>
+            <param name="PlayerKey">The associated matchmaking key.</param>
+            <param name="RequestId">The effective request identifier.</param>
+            <param name="Match">The match assignment when pairing succeeds.</param>
+            <param name="Reason">An optional human-readable explanation for a non-success outcome.</param>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingResult.Status">
+            <summary>The matchmaking outcome.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingResult.PlayerKey">
+            <summary>The associated matchmaking key.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingResult.RequestId">
+            <summary>The effective request identifier.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingResult.Match">
+            <summary>The match assignment when pairing succeeds.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingResult.Reason">
+            <summary>An optional human-readable explanation for a non-success outcome.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingResult.IsSuccess">
+            <summary>Gets whether the operation is in a normal waiting or matched state.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.IMatchmakingCompatibilityPolicy">
+            <summary>Determines whether two matchmaking requests may be paired.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchmakingCompatibilityPolicy.IsCompatible(MemoAna.Application.Matchmaking.JoinMatchmakingRequest,MemoAna.Application.Matchmaking.JoinMatchmakingRequest)">
+            <summary>Determines whether the incoming request is compatible with a waiting request.</summary>
+            <param name="incoming">The incoming request.</param>
+            <param name="waiting">The waiting request.</param>
+            <returns><see langword="true"/> when the requests may be paired.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown by an implementation when a request is null.</exception>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.DefaultMatchmakingCompatibilityPolicy">
+            <summary>Matches requests whose effective compatibility keys are equal.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.DefaultMatchmakingCompatibilityPolicy.IsCompatible(MemoAna.Application.Matchmaking.JoinMatchmakingRequest,MemoAna.Application.Matchmaking.JoinMatchmakingRequest)">
+            <inheritdoc />
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.MatchmakingIdentitySet">
+            <summary>Contains server-generated identities required to create a match and its players.</summary>
+            <param name="Match">The match identity.</param>
+            <param name="Session">The session identity.</param>
+            <param name="FirstPlayer">The first player identity.</param>
+            <param name="SecondPlayer">The second player identity.</param>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.MatchmakingIdentitySet.#ctor(MemoAna.Domain.Matchmaking.MatchIdentity,MemoAna.Domain.Matchmaking.SessionIdentity,MemoAna.Domain.Matchmaking.PlayerIdentity,MemoAna.Domain.Matchmaking.PlayerIdentity)">
+            <summary>Contains server-generated identities required to create a match and its players.</summary>
+            <param name="Match">The match identity.</param>
+            <param name="Session">The session identity.</param>
+            <param name="FirstPlayer">The first player identity.</param>
+            <param name="SecondPlayer">The second player identity.</param>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingIdentitySet.Match">
+            <summary>The match identity.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingIdentitySet.Session">
+            <summary>The session identity.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingIdentitySet.FirstPlayer">
+            <summary>The first player identity.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.MatchmakingIdentitySet.SecondPlayer">
+            <summary>The second player identity.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.IServerMatchmakingIdentityGenerator">
+            <summary>Generates identities used by server-side matchmaking.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IServerMatchmakingIdentityGenerator.Create">
+            <summary>Creates a new identity set.</summary>
+            <returns>A set of server-generated identities.</returns>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.GuidMatchmakingIdentityGenerator">
+            <summary>Generates match, session, and player identities using GUID values.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.GuidMatchmakingIdentityGenerator.Create">
+            <inheritdoc />
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.IMatchSessionRuntime">
+            <summary>Provides authoritative command submission and lifecycle ownership for one session runtime.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchSessionRuntime.SubmitAsync(MemoAna.Domain.Sessions.SessionCommand,System.Threading.CancellationToken)">
+            <summary>Submits a command to the serialized session processor.</summary>
+            <param name="command">The command to process.</param>
+            <param name="cancellationToken">The token used to cancel queueing or awaiting the result.</param>
+            <returns>The authoritative command result.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="command"/> is null.</exception>
+            <exception cref="T:System.OperationCanceledException">Thrown when cancellation is requested.</exception>
+            <exception cref="T:System.ObjectDisposedException">Thrown when the runtime is closed.</exception>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchSessionRuntime.DisposeAsync">
+            <summary>Disposes the runtime and waits for its processor to finish.</summary>
+            <returns>A value task that completes when the runtime has stopped.</returns>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.IMatchSessionEventSource">
+            <summary>Exposes authoritative events produced by a session runtime.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchSessionEventSource.Subscribe(System.Threading.CancellationToken)">
+            <summary>Subscribes to future session events.</summary>
+            <param name="cancellationToken">The token used to stop enumeration.</param>
+            <returns>An asynchronous sequence of authoritative events.</returns>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.IMatchmakingSessionGateway">
+            <summary>Coordinates matchmaking requests and access to matched session runtimes.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchmakingSessionGateway.JoinAsync(MemoAna.Application.Matchmaking.JoinMatchmakingRequest,System.Threading.CancellationToken)">
+            <summary>Enters the specified player into matchmaking.</summary>
+            <param name="request">The matchmaking request.</param>
+            <param name="cancellationToken">The token used to cancel the operation.</param>
+            <returns>The current matchmaking result.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="request"/> is null.</exception>
+            <exception cref="T:System.ArgumentException">Thrown when required request fields are invalid.</exception>
+            <exception cref="T:System.OperationCanceledException">Thrown when cancellation is requested.</exception>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchmakingSessionGateway.WaitForMatchAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Waits until a player is matched or the operation is cancelled.</summary>
+            <param name="playerKey">The matchmaking key to await.</param>
+            <param name="cancellationToken">The token used to cancel the wait.</param>
+            <returns>The resulting matchmaking state.</returns>
+            <exception cref="T:System.ArgumentException">Thrown when <paramref name="playerKey"/> is invalid.</exception>
+            <exception cref="T:System.OperationCanceledException">Thrown when cancellation is requested.</exception>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchmakingSessionGateway.TrySubscribe(MemoAna.Domain.Matchmaking.SessionIdentity,System.Threading.CancellationToken,System.Collections.Generic.IAsyncEnumerable{MemoAna.Domain.Sessions.SessionEvent}@)">
+            <summary>Attempts to subscribe to events for a matched session.</summary>
+            <param name="session">The session identity.</param>
+            <param name="cancellationToken">The token used to cancel subscription creation.</param>
+            <param name="events">The event stream when the session exists; otherwise <see langword="null"/>.</param>
+            <returns><see langword="true"/> when the session exists.</returns>
+            <exception cref="T:System.OperationCanceledException">Thrown when cancellation is requested.</exception>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchmakingSessionGateway.TryGetRuntime(MemoAna.Domain.Matchmaking.SessionIdentity,MemoAna.Application.Matchmaking.IMatchSessionRuntime@)">
+            <summary>Attempts to retrieve a matched session runtime.</summary>
+            <param name="session">The session identity.</param>
+            <param name="runtime">The runtime when registered; otherwise <see langword="null"/>.</param>
+            <returns><see langword="true"/> when the runtime exists.</returns>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.IMatchSessionRuntimeFactory">
+            <summary>Creates authoritative session runtimes.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchSessionRuntimeFactory.CreateAsync(MemoAna.Domain.Matchmaking.SessionIdentity,MemoAna.Domain.Matchmaking.MatchIdentity,System.Threading.CancellationToken)">
+            <summary>Creates a runtime for the specified session and match.</summary>
+            <param name="session">The session identity.</param>
+            <param name="match">The match identity.</param>
+            <param name="cancellationToken">The token used to cancel creation.</param>
+            <returns>The created runtime.</returns>
+            <exception cref="T:System.OperationCanceledException">Thrown when cancellation is requested.</exception>
+        </member>
+        <member name="T:MemoAna.Domain.Matchmaking.MatchIdentity">
+            <summary>
+            Identifies a server-created match.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Matchmaking.MatchIdentity.#ctor(System.String)">
+            <summary>
+            Initializes a match identity.
+            </summary>
+            <param name="value">The non-empty identity value.</param>
+            <exception cref="T:System.ArgumentException">Thrown when <paramref name="value"/> is null, empty, or whitespace.</exception>
+        </member>
+        <member name="P:MemoAna.Domain.Matchmaking.MatchIdentity.Value">
+            <summary>
+            Gets the identity value.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Matchmaking.MatchIdentity.ToString">
+            <summary>
+            Returns the identity value.
+            </summary>
+            <returns>The identity value.</returns>
+        </member>
+        <member name="T:MemoAna.Domain.Matchmaking.PlayerIdentity">
+            <summary>
+            Identifies a player within a server-authoritative match.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Matchmaking.PlayerIdentity.#ctor(System.String)">
+            <summary>
+            Initializes a player identity.
+            </summary>
+            <param name="value">The non-empty identity value.</param>
+            <exception cref="T:System.ArgumentException">Thrown when <paramref name="value"/> is null, empty, or whitespace.</exception>
+        </member>
+        <member name="P:MemoAna.Domain.Matchmaking.PlayerIdentity.Value">
+            <summary>
+            Gets the identity value.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Matchmaking.PlayerIdentity.ToString">
+            <summary>
+            Returns the identity value.
+            </summary>
+            <returns>The identity value.</returns>
+        </member>
+        <member name="T:MemoAna.Domain.Matchmaking.PlayerSlot">
+            <summary>
+            Represents a player's server-assigned position and readiness within a session.
+            </summary>
+            <param name="Player">The server-assigned player identity.</param>
+            <param name="Number">The one-based slot number.</param>
+            <param name="IsReady">Whether the player has declared readiness.</param>
+        </member>
+        <member name="M:MemoAna.Domain.Matchmaking.PlayerSlot.#ctor(MemoAna.Domain.Matchmaking.PlayerIdentity,System.Int32,System.Boolean)">
+            <summary>
+            Represents a player's server-assigned position and readiness within a session.
+            </summary>
+            <param name="Player">The server-assigned player identity.</param>
+            <param name="Number">The one-based slot number.</param>
+            <param name="IsReady">Whether the player has declared readiness.</param>
+        </member>
+        <member name="P:MemoAna.Domain.Matchmaking.PlayerSlot.Player">
+            <summary>The server-assigned player identity.</summary>
+        </member>
+        <member name="P:MemoAna.Domain.Matchmaking.PlayerSlot.Number">
+            <summary>The one-based slot number.</summary>
+        </member>
+        <member name="P:MemoAna.Domain.Matchmaking.PlayerSlot.IsReady">
+            <summary>Whether the player has declared readiness.</summary>
+        </member>
+        <member name="T:MemoAna.Domain.Matchmaking.SessionIdentity">
+            <summary>
+            Identifies a server-authoritative match session.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Matchmaking.SessionIdentity.#ctor(System.String)">
+            <summary>
+            Initializes a session identity.
+            </summary>
+            <param name="value">The non-empty identity value.</param>
+            <exception cref="T:System.ArgumentException">Thrown when <paramref name="value"/> is null, empty, or whitespace.</exception>
+        </member>
+        <member name="P:MemoAna.Domain.Matchmaking.SessionIdentity.Value">
+            <summary>
+            Gets the identity value.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Matchmaking.SessionIdentity.ToString">
+            <summary>
+            Returns the identity value.
+            </summary>
+            <returns>The identity value.</returns>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.AuthoritativeGameState">
+            <summary>
+            Holds the server-authoritative mutable game state for a match.
+            </summary>
+            <remarks>
+            The state is owned by <see cref="T:MemoAna.Domain.Sessions.MatchSession"/> and is mutated only while a
+            session command is being processed by the authoritative session runtime.
+            </remarks>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.AuthoritativeGameState.FlippedPositions">
+            <summary>
+            Gets the board positions that have already been flipped.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.AuthoritativeGameState.Scores">
+            <summary>
+            Gets the authoritative score for each player.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.AuthoritativeGameState.CurrentTurn">
+            <summary>
+            Gets or sets the player who owns the current turn.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.AuthoritativeGameState.Result">
+            <summary>
+            Gets or sets the authoritative match result.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.AuthoritativeGameState.Winner">
+            <summary>
+            Gets or sets the authoritative winner, when the result has a unique winner.
+            </summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.LeaveReason">
+            <summary>
+            Describes why a player left a session.
+            </summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.LeaveReason.Voluntary">
+            <summary>The player left voluntarily.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.LeaveReason.Disconnected">
+            <summary>The player's connection was disconnected.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.LeaveReason.SessionTerminated">
+            <summary>The session terminated the player's participation.</summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.MatchResult">
+            <summary>
+            Describes the authoritative outcome of a match.
+            </summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.MatchResult.Unresolved">
+            <summary>The match has no terminal result yet.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.MatchResult.Win">
+            <summary>One player won the match.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.MatchResult.Draw">
+            <summary>The match ended without a unique winner.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.MatchResult.NoContest">
+            <summary>The match ended without a competitive result.</summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.MatchSession">
+            <summary>
+            Owns the authoritative state and legal transitions for one PVP match session.
+            </summary>
+            <remarks>
+            <see cref="T:MemoAna.Domain.Sessions.MatchSession"/> is intentionally independent from networking. Commands are expected to be
+            serialized by <c>SessionRuntime</c>; callers must not concurrently mutate or invoke the session.
+            </remarks>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.MatchSession.MaximumPlayers">
+            <summary>Gets the maximum number of players supported by a session.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.MatchSession.BoardSize">
+            <summary>Gets the number of board positions in the current game model.</summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.MatchSession.Session">
+            <summary>
+            Gets the server-assigned session identity.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.MatchSession.Match">
+            <summary>
+            Gets the optional match identity associated with the session.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.MatchSession.State">
+            <summary>
+            Gets the current authoritative lifecycle state.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.MatchSession.StateVersion">
+            <summary>
+            Gets the monotonically increasing authoritative state version.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.MatchSession.LastEventSequence">
+            <summary>
+            Gets the most recently emitted authoritative event sequence.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.MatchSession.Players">
+            <summary>
+            Gets the players currently bound to the session and their server-assigned slots.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.MatchSession.Game">
+            <summary>
+            Gets the authoritative game state.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.MatchSession.Create(MemoAna.Domain.Matchmaking.SessionIdentity,System.Nullable{MemoAna.Domain.Matchmaking.MatchIdentity})">
+            <summary>
+            Creates an empty match session.
+            </summary>
+            <param name="session">The server-assigned session identity.</param>
+            <param name="match">The optional server-assigned match identity.</param>
+            <returns>A new session in <see cref="F:MemoAna.Domain.Sessions.SessionLifecycle.WaitingForPlayers"/>.</returns>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.MatchSession.Handle(MemoAna.Domain.Sessions.SessionCommand)">
+            <summary>
+            Processes one command against the authoritative session state.
+            </summary>
+            <param name="command">The command to process.</param>
+            <returns>An accepted result containing authoritative events, or a rejection result describing why the command was not applied.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="command"/> is <see langword="null"/>.</exception>
+            <exception cref="T:System.InvalidOperationException">Thrown only if an invariant required by an accepted gameplay transition cannot be satisfied by the current authoritative state.</exception>
+            <remarks>
+            Duplicate command identifiers are rejected deterministically. Client sequence numbers are checked per player,
+            while system commands bypass client ordering. Accepted transitions advance the event sequence and state version.
+            </remarks>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.SessionCommand">
+            <summary>
+            Represents an intent submitted to the authoritative match session.
+            </summary>
+            <param name="CommandId">The client- or server-generated command identifier.</param>
+            <param name="Player">The player associated with the command, or <see langword="null"/> for a system command.</param>
+            <param name="ClientSequence">The client sequence associated with the command.</param>
+            <remarks>
+            Commands contain intent and identity metadata only. Authoritative outcomes are derived by the session.
+            </remarks>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.SessionCommand.#ctor(System.String,System.Nullable{MemoAna.Domain.Matchmaking.PlayerIdentity},System.UInt64)">
+            <summary>
+            Represents an intent submitted to the authoritative match session.
+            </summary>
+            <param name="CommandId">The client- or server-generated command identifier.</param>
+            <param name="Player">The player associated with the command, or <see langword="null"/> for a system command.</param>
+            <param name="ClientSequence">The client sequence associated with the command.</param>
+            <remarks>
+            Commands contain intent and identity metadata only. Authoritative outcomes are derived by the session.
+            </remarks>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.SessionCommand.CommandId">
+            <summary>The client- or server-generated command identifier.</summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.SessionCommand.Player">
+            <summary>The player associated with the command, or <see langword="null"/> for a system command.</summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.SessionCommand.ClientSequence">
+            <summary>The client sequence associated with the command.</summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.SessionCommand.IsSystemCommand">
+            <summary>
+            Gets a value indicating whether the command is generated by the server rather than a player.
+            </summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.JoinSessionCommand">
+            <summary>
+            Requests that a player join the session.
+            </summary>
+            <param name="CommandId">The command identifier.</param>
+            <param name="JoiningPlayer">The player identity assigned to the joining player.</param>
+            <param name="ClientSequence">The first client sequence value for the player.</param>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.JoinSessionCommand.#ctor(System.String,MemoAna.Domain.Matchmaking.PlayerIdentity,System.UInt64)">
+            <summary>
+            Requests that a player join the session.
+            </summary>
+            <param name="CommandId">The command identifier.</param>
+            <param name="JoiningPlayer">The player identity assigned to the joining player.</param>
+            <param name="ClientSequence">The first client sequence value for the player.</param>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.JoinSessionCommand.JoiningPlayer">
+            <summary>The player identity assigned to the joining player.</summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.ReadyUpCommand">
+            <summary>
+            Requests a readiness-state change for a player.
+            </summary>
+            <param name="CommandId">The command identifier.</param>
+            <param name="PlayerId">The player changing readiness.</param>
+            <param name="Ready">The requested readiness state.</param>
+            <param name="ClientSequence">The player's client sequence value.</param>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.ReadyUpCommand.#ctor(System.String,MemoAna.Domain.Matchmaking.PlayerIdentity,System.Boolean,System.UInt64)">
+            <summary>
+            Requests a readiness-state change for a player.
+            </summary>
+            <param name="CommandId">The command identifier.</param>
+            <param name="PlayerId">The player changing readiness.</param>
+            <param name="Ready">The requested readiness state.</param>
+            <param name="ClientSequence">The player's client sequence value.</param>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.ReadyUpCommand.PlayerId">
+            <summary>The player changing readiness.</summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.ReadyUpCommand.Ready">
+            <summary>The requested readiness state.</summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.StartGameCommand">
+            <summary>
+            Requests that the authoritative session start.
+            </summary>
+            <param name="CommandId">The server-generated command identifier.</param>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.StartGameCommand.#ctor(System.String)">
+            <summary>
+            Requests that the authoritative session start.
+            </summary>
+            <param name="CommandId">The server-generated command identifier.</param>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.LeaveSessionCommand">
+            <summary>
+            Requests that a player leave the session.
+            </summary>
+            <param name="CommandId">The command identifier.</param>
+            <param name="PlayerId">The player leaving the session.</param>
+            <param name="Reason">The reason for leaving.</param>
+            <param name="ClientSequence">The player's client sequence value.</param>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.LeaveSessionCommand.#ctor(System.String,MemoAna.Domain.Matchmaking.PlayerIdentity,MemoAna.Domain.Sessions.LeaveReason,System.UInt64)">
+            <summary>
+            Requests that a player leave the session.
+            </summary>
+            <param name="CommandId">The command identifier.</param>
+            <param name="PlayerId">The player leaving the session.</param>
+            <param name="Reason">The reason for leaving.</param>
+            <param name="ClientSequence">The player's client sequence value.</param>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.LeaveSessionCommand.PlayerId">
+            <summary>The player leaving the session.</summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.LeaveSessionCommand.Reason">
+            <summary>The reason for leaving.</summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.FlipCardCommand">
+            <summary>
+            Requests that a player flip an unflipped board position.
+            </summary>
+            <param name="CommandId">The command identifier.</param>
+            <param name="PlayerId">The player making the move.</param>
+            <param name="Position">The zero-based board position.</param>
+            <param name="ClientSequence">The player's client sequence value.</param>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.FlipCardCommand.#ctor(System.String,MemoAna.Domain.Matchmaking.PlayerIdentity,System.Int32,System.UInt64)">
+            <summary>
+            Requests that a player flip an unflipped board position.
+            </summary>
+            <param name="CommandId">The command identifier.</param>
+            <param name="PlayerId">The player making the move.</param>
+            <param name="Position">The zero-based board position.</param>
+            <param name="ClientSequence">The player's client sequence value.</param>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.FlipCardCommand.PlayerId">
+            <summary>The player making the move.</summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.FlipCardCommand.Position">
+            <summary>The zero-based board position.</summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.AbortSessionCommand">
+            <summary>
+            Requests that the authoritative session be aborted.
+            </summary>
+            <param name="CommandId">The server-generated command identifier.</param>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.AbortSessionCommand.#ctor(System.String)">
+            <summary>
+            Requests that the authoritative session be aborted.
+            </summary>
+            <param name="CommandId">The server-generated command identifier.</param>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.ExpireSessionCommand">
+            <summary>
+            Requests that the authoritative session be expired.
+            </summary>
+            <param name="CommandId">The server-generated command identifier.</param>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.ExpireSessionCommand.#ctor(System.String)">
+            <summary>
+            Requests that the authoritative session be expired.
+            </summary>
+            <param name="CommandId">The server-generated command identifier.</param>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.SessionCommandResult">
+            <summary>
+            Represents the authoritative outcome of processing one session command.
+            </summary>
+            <remarks>
+            Rejected commands are represented as data so transport adapters can return protocol-level
+            rejection events instead of converting normal domain validation into RPC failures.
+            </remarks>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.SessionCommandResult.Accepted">
+            <summary>
+            Gets a value indicating whether the command changed or was accepted by the session.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.SessionCommandResult.RejectionCode">
+            <summary>
+            Gets the rejection code when the command was rejected.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.SessionCommandResult.Reason">
+            <summary>
+            Gets the human-readable rejection reason when the command was rejected.
+            </summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.SessionCommandResult.Events">
+            <summary>
+            Gets the authoritative events produced by the command.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.SessionCommandResult.Accept(System.Collections.Generic.IReadOnlyList{MemoAna.Domain.Sessions.SessionEvent})">
+            <summary>
+            Creates an accepted command result containing the authoritative events produced by processing.
+            </summary>
+            <param name="events">The events produced by the command.</param>
+            <returns>An accepted command result.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="events"/> is <see langword="null"/>.</exception>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.SessionCommandResult.Reject(MemoAna.Domain.Sessions.SessionRejectionCode,System.String)">
+            <summary>
+            Creates a rejected command result.
+            </summary>
+            <param name="code">The reason category for the rejection.</param>
+            <param name="reason">The caller-facing explanation of the rejection.</param>
+            <returns>A rejected command result containing no events.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="reason"/> is <see langword="null"/>.</exception>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.SessionEvent">
+            <summary>
+            Represents an authoritative fact emitted by a match session.
+            </summary>
+            <param name="Sequence">The monotonically increasing session event sequence.</param>
+            <param name="StateVersion">The authoritative state version after the associated transition.</param>
+            <remarks>
+            Events are immutable projections of state transitions and are intended for transport/application publication.
+            </remarks>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.SessionEvent.#ctor(System.UInt64,System.UInt64)">
+            <summary>
+            Represents an authoritative fact emitted by a match session.
+            </summary>
+            <param name="Sequence">The monotonically increasing session event sequence.</param>
+            <param name="StateVersion">The authoritative state version after the associated transition.</param>
+            <remarks>
+            Events are immutable projections of state transitions and are intended for transport/application publication.
+            </remarks>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.SessionEvent.Sequence">
+            <summary>The monotonically increasing session event sequence.</summary>
+        </member>
+        <member name="P:MemoAna.Domain.Sessions.SessionEvent.StateVersion">
+            <summary>The authoritative state version after the associated transition.</summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.PlayerJoinedEvent">
+            <summary>
+            Indicates that a player joined the session.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.PlayerJoinedEvent.#ctor(System.UInt64,System.UInt64,MemoAna.Domain.Matchmaking.PlayerIdentity,System.Int32,System.Int32)">
+            <summary>
+            Indicates that a player joined the session.
+            </summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.PlayerReadyChangedEvent">
+            <summary>
+            Indicates that a player's readiness changed.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.PlayerReadyChangedEvent.#ctor(System.UInt64,System.UInt64,MemoAna.Domain.Matchmaking.PlayerIdentity,System.Boolean)">
+            <summary>
+            Indicates that a player's readiness changed.
+            </summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.SessionStateChangedEvent">
+            <summary>
+            Indicates that the session lifecycle changed.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.SessionStateChangedEvent.#ctor(System.UInt64,System.UInt64,MemoAna.Domain.Sessions.SessionLifecycle)">
+            <summary>
+            Indicates that the session lifecycle changed.
+            </summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.GameStartedEvent">
+            <summary>
+            Indicates that gameplay has started.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.GameStartedEvent.#ctor(System.UInt64,System.UInt64,MemoAna.Domain.Matchmaking.PlayerIdentity)">
+            <summary>
+            Indicates that gameplay has started.
+            </summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.CardFlipAcceptedEvent">
+            <summary>
+            Indicates that a card flip was accepted by the authoritative game state.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.CardFlipAcceptedEvent.#ctor(System.UInt64,System.UInt64,MemoAna.Domain.Matchmaking.PlayerIdentity,System.Int32,System.Int32)">
+            <summary>
+            Indicates that a card flip was accepted by the authoritative game state.
+            </summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.PlayerLeftEvent">
+            <summary>
+            Indicates that a player left the session.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.PlayerLeftEvent.#ctor(System.UInt64,System.UInt64,MemoAna.Domain.Matchmaking.PlayerIdentity,MemoAna.Domain.Sessions.LeaveReason)">
+            <summary>
+            Indicates that a player left the session.
+            </summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.SessionFinishedEvent">
+            <summary>
+            Indicates that the session reached a terminal state.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.SessionFinishedEvent.#ctor(System.UInt64,System.UInt64,MemoAna.Domain.Sessions.SessionLifecycle,MemoAna.Domain.Sessions.MatchResult,System.Nullable{MemoAna.Domain.Matchmaking.PlayerIdentity})">
+            <summary>
+            Indicates that the session reached a terminal state.
+            </summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.SessionLifecycle">
+            <summary>
+            Represents the authoritative lifecycle state of a match session.
+            </summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionLifecycle.WaitingForPlayers">
+            <summary>The session is waiting for both players.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionLifecycle.Ready">
+            <summary>Both players are ready and the session can start.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionLifecycle.Running">
+            <summary>The game is accepting gameplay commands.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionLifecycle.Completed">
+            <summary>The game completed normally.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionLifecycle.Aborted">
+            <summary>The session ended before normal completion.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionLifecycle.Expired">
+            <summary>The session expired before normal completion.</summary>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.SessionLifecycleExtensions">
+            <summary>
+            Provides lifecycle-state helper operations.
+            </summary>
+        </member>
+        <member name="M:MemoAna.Domain.Sessions.SessionLifecycleExtensions.IsTerminal(MemoAna.Domain.Sessions.SessionLifecycle)">
+            <summary>
+            Determines whether a lifecycle state is terminal.
+            </summary>
+            <param name="lifecycle">The lifecycle state to inspect.</param>
+            <returns><see langword="true"/> when the state cannot transition further; otherwise, <see langword="false"/>.</returns>
+        </member>
+        <member name="T:MemoAna.Domain.Sessions.SessionRejectionCode">
+            <summary>
+            Identifies why the authoritative session rejected a command.
+            </summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionRejectionCode.InvalidCommand">
+            <summary>The command was malformed or unsupported.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionRejectionCode.InvalidState">
+            <summary>The command is incompatible with the current lifecycle state.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionRejectionCode.NotAuthorized">
+            <summary>The sender is not authorized for the target session/player.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionRejectionCode.OutOfOrder">
+            <summary>The client sequence does not follow the expected order.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionRejectionCode.Duplicate">
+            <summary>The command was already processed.</summary>
+        </member>
+        <member name="F:MemoAna.Domain.Sessions.SessionRejectionCode.IllegalMove">
+            <summary>The requested gameplay or lifecycle action is illegal.</summary>
+        </member>
+        <member name="T:MemoAna.Extensions.WebApplicationBuilderExtensions">
+            <summary>Provides dependency-injection registration extensions for the application layers.</summary>
+        </member>
+        <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.AddApplication(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
+            <inheritdoc cref="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddApplication"/>
+        </member>
+        <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.AddInfrastructure(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
+            <inheritdoc cref="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddInfrastructure"/>
+        </member>
+        <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.AddPresentation(Microsoft.AspNetCore.Builder.WebApplicationBuilder)">
+            <inheritdoc cref="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddPresentation"/>
+        </member>
+        <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddApplication">
+            <summary>Registers application services, matchmaking, and localization.</summary>
+            <returns>The same builder instance for fluent configuration.</returns>
+        </member>
+        <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddInfrastructure">
+            <summary>Registers infrastructure services used by authoritative sessions.</summary>
+            <returns>The same builder instance for fluent configuration.</returns>
+        </member>
+        <member name="M:MemoAna.Extensions.WebApplicationBuilderExtensions.&lt;G&gt;$41F16C2D39AF52899E745C9C9F42FF83.AddPresentation">
+            <summary>Registers REST controllers and gRPC services.</summary>
+            <returns>The same builder instance for fluent configuration.</returns>
+        </member>
+        <member name="T:MemoAna.Infrastructure.Localization.Localizer">
+            <summary>Resolves application strings from the configured RESX localization resources.</summary>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Localization.Localizer.#ctor(Microsoft.Extensions.Localization.IStringLocalizerFactory)">
+            <summary>Resolves application strings from the configured RESX localization resources.</summary>
+        </member>
+        <member name="P:MemoAna.Infrastructure.Localization.Localizer.Item(System.String)">
+            <summary>Gets the localized value associated with a resource key.</summary>
+            <param name="key">The resource key to resolve.</param>
+            <returns>The localized resource value for the current culture.</returns>
+        </member>
+        <member name="T:MemoAna.Infrastructure.Sessions.SessionRuntime">
+            <summary>Serializes commands for one authoritative session and publishes its resulting events.</summary>
+            <remarks>The bounded command queue guarantees a single reader, making <see cref="T:MemoAna.Domain.Sessions.MatchSession"/> mutation deterministic.</remarks>
+        </member>
+        <member name="P:MemoAna.Infrastructure.Sessions.SessionRuntime.Session">
+            <summary>Gets the authoritative session owned by this runtime.</summary>
+        </member>
+        <member name="P:MemoAna.Infrastructure.Sessions.SessionRuntime.Completion">
+            <summary>Gets the task representing the runtime processor lifetime.</summary>
+        </member>
+        <member name="P:MemoAna.Infrastructure.Sessions.SessionRuntime.IsClosed">
+            <summary>Gets whether shutdown has started.</summary>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntime.SubmitAsync(MemoAna.Domain.Sessions.SessionCommand,System.Threading.CancellationToken)">
+            <summary>Queues a command and asynchronously waits for its authoritative result.</summary>
+            <param name="command">The command to process.</param>
+            <param name="cancellationToken">The token used to cancel queueing or waiting.</param>
+            <returns>The authoritative command result.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="command"/> is null.</exception>
+            <exception cref="T:System.OperationCanceledException">Thrown when cancellation is requested.</exception>
+            <exception cref="T:System.ObjectDisposedException">Thrown when the runtime is closed.</exception>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntime.Subscribe(System.Threading.CancellationToken)">
+            <summary>Subscribes to future authoritative events.</summary>
+            <param name="cancellationToken">The token used to stop enumeration.</param>
+            <returns>An asynchronous sequence of session events.</returns>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntime.DisposeAsync">
+            <summary>Stops command processing, completes subscribers, and waits for processor termination.</summary>
+            <returns>A value task that completes when shutdown finishes.</returns>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntime.ProcessCommandsAsync">
+            <remarks>Commands are applied before their events are published to preserve authoritative ordering.</remarks>
+        </member>
+        <member name="T:MemoAna.Infrastructure.Sessions.SessionRuntimeFactory">
+            <summary>Creates runtime handles backed by the session runtime registry.</summary>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeFactory.#ctor(MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry)">
+            <summary>Creates runtime handles backed by the session runtime registry.</summary>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeFactory.CreateAsync(MemoAna.Domain.Matchmaking.SessionIdentity,MemoAna.Domain.Matchmaking.MatchIdentity,System.Threading.CancellationToken)">
+            <summary>Creates a new authoritative runtime for the specified session.</summary>
+            <param name="session">The session identity.</param>
+            <param name="match">The match identity.</param>
+            <param name="cancellationToken">The token used to cancel creation.</param>
+            <returns>A runtime handle exposing command and event operations.</returns>
+            <exception cref="T:System.OperationCanceledException">Thrown when cancellation is requested.</exception>
+        </member>
+        <member name="T:MemoAna.Infrastructure.Sessions.SessionRuntimeOptions">
+            <summary>Configures bounded capacities used by a session runtime.</summary>
+        </member>
+        <member name="P:MemoAna.Infrastructure.Sessions.SessionRuntimeOptions.CommandCapacity">
+            <summary>Gets the maximum number of commands that may wait in the runtime queue.</summary>
+        </member>
+        <member name="P:MemoAna.Infrastructure.Sessions.SessionRuntimeOptions.EventCapacity">
+            <summary>Gets the maximum number of events buffered for a subscriber.</summary>
+        </member>
+        <member name="T:MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry">
+            <summary>Owns the process-local collection of active authoritative session runtimes.</summary>
+            <remarks>Runtime removal is callback-driven so terminal sessions do not remain registered after processing stops.</remarks>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry.#ctor(MemoAna.Infrastructure.Sessions.SessionRuntimeOptions,System.Threading.CancellationToken)">
+            <summary>Initializes the registry.</summary>
+            <param name="options">Optional runtime capacity configuration.</param>
+            <param name="cancellationToken">Token that stops all runtimes owned by the registry.</param>
+        </member>
+        <member name="P:MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry.Count">
+            <summary>Gets the number of active runtimes.</summary>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry.Create(MemoAna.Domain.Matchmaking.SessionIdentity,System.Nullable{MemoAna.Domain.Matchmaking.MatchIdentity})">
+            <summary>Creates and registers an authoritative session runtime.</summary>
+            <param name="sessionIdentity">The unique session identity.</param>
+            <param name="matchIdentity">The optional match identity.</param>
+            <returns>The registered runtime.</returns>
+            <exception cref="T:System.ObjectDisposedException">Thrown when the registry has been disposed.</exception>
+            <exception cref="T:System.InvalidOperationException">Thrown when the session identity is already registered.</exception>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry.TryGet(MemoAna.Domain.Matchmaking.SessionIdentity,MemoAna.Infrastructure.Sessions.SessionRuntime@)">
+            <summary>Attempts to retrieve an active runtime.</summary>
+            <param name="sessionIdentity">The session identity.</param>
+            <param name="runtime">The runtime when found; otherwise <see langword="null"/>.</param>
+            <returns><see langword="true"/> when a runtime exists.</returns>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry.Get(MemoAna.Domain.Matchmaking.SessionIdentity)">
+            <summary>Retrieves an active runtime.</summary>
+            <param name="sessionIdentity">The session identity.</param>
+            <returns>The registered runtime.</returns>
+            <exception cref="T:System.Collections.Generic.KeyNotFoundException">Thrown when no runtime is registered for the identity.</exception>
+        </member>
+        <member name="M:MemoAna.Infrastructure.Sessions.SessionRuntimeRegistry.DisposeAsync">
+            <summary>Stops and disposes every active runtime.</summary>
+            <returns>A value task that completes after all runtimes have stopped.</returns>
+        </member>
+        <member name="T:MemoAna.Presentation.Grpc.GameMatchmakingGrpcService">
+            <summary>Adapts the authoritative matchmaking/session application boundary to the bidirectional gRPC protocol.</summary>
+            <remarks>This adapter validates transport input, maps protobuf messages to domain commands, and publishes authoritative events without owning domain state.</remarks>
+        </member>
+        <member name="M:MemoAna.Presentation.Grpc.GameMatchmakingGrpcService.#ctor(MemoAna.Application.Matchmaking.IMatchmakingSessionGateway)">
+            <summary>Adapts the authoritative matchmaking/session application boundary to the bidirectional gRPC protocol.</summary>
+            <remarks>This adapter validates transport input, maps protobuf messages to domain commands, and publishes authoritative events without owning domain state.</remarks>
+        </member>
+        <member name="M:MemoAna.Presentation.Grpc.GameMatchmakingGrpcService.Connect(Grpc.Core.IAsyncStreamReader{MemoAna.Proto.GameMatchmaking.V1.ClientCommand},Grpc.Core.IServerStreamWriter{MemoAna.Proto.GameMatchmaking.V1.ServerEvent},Grpc.Core.ServerCallContext)">
+            <summary>Maintains one bidirectional stream for matchmaking and authoritative session commands/events.</summary>
+            <param name="requestStream">The inbound client command stream.</param>
+            <param name="responseStream">The outbound server event stream.</param>
+            <param name="context">The gRPC call context and connection cancellation token.</param>
+            <returns>A task that completes when the client stream ends or the connection is cancelled.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when a required stream argument is null.</exception>
+            <exception cref="T:System.OperationCanceledException">Thrown when the connection is cancelled while asynchronous stream processing is active.</exception>
+        </member>
+        <member name="M:MemoAna.Presentation.Grpc.GameMatchmakingGrpcService.ReadCommandsAsync(Grpc.Core.IAsyncStreamReader{MemoAna.Proto.GameMatchmaking.V1.ClientCommand},System.Threading.Channels.ChannelWriter{MemoAna.Proto.GameMatchmaking.V1.ServerEvent},System.Threading.CancellationToken,System.Collections.Generic.ICollection{System.Threading.Tasks.Task})">
+            <remarks>The stream is bound to a server-generated player key after the first valid join; client-supplied identities are treated as correlation data and never as an authorization source.</remarks>
+        </member>
+        <member name="M:MemoAna.Presentation.Grpc.GameMatchmakingGrpcService.PublishSessionEventsAsync(MemoAna.Application.Matchmaking.MatchFound,System.Threading.Channels.ChannelWriter{MemoAna.Proto.GameMatchmaking.V1.ServerEvent},System.Threading.CancellationToken)">
+            <remarks>Session events are read from the runtime subscription and converted without altering their authoritative sequence or state version.</remarks>
+        </member>
+        <member name="M:MemoAna.Presentation.Grpc.GameMatchmakingGrpcService.ToDomainCommand(MemoAna.Proto.GameMatchmaking.V1.ClientCommand,MemoAna.Application.Matchmaking.MatchFound)">
+            <remarks>Only protocol intents are converted to domain commands; authoritative outcomes are never accepted from the client payload.</remarks>
+        </member>
+        <member name="M:MemoAna.Presentation.Grpc.GameMatchmakingGrpcService.ToServerEvent(MemoAna.Domain.Sessions.SessionEvent,MemoAna.Application.Matchmaking.MatchFound)">
+            <remarks>Every mapped event preserves the authoritative sequence and state version supplied by the session.</remarks>
+        </member>
+        <member name="M:MemoAna.Presentation.Grpc.GameMatchmakingGrpcService.TryValidate(MemoAna.Proto.GameMatchmaking.V1.ClientCommand,MemoAna.Proto.GameMatchmaking.V1.ServerEvent@)">
+            <remarks>Validation rejects malformed transport input before it reaches matchmaking or the authoritative session.</remarks>
+        </member>
+        <member name="T:MemoAna.Resources.Localization.Strings">
+            <summary>Provides the strongly named anchor type used by the application's RESX localization resources.</summary>
+        </member>
+        <member name="T:MemoAna.Services.GreeterService">
+            <summary>Provides the sample gRPC greeting endpoint included by the template.</summary>
+        </member>
+        <member name="M:MemoAna.Services.GreeterService.#ctor(Microsoft.Extensions.Logging.ILogger{MemoAna.Services.GreeterService})">
+            <summary>Provides the sample gRPC greeting endpoint included by the template.</summary>
+        </member>
+        <member name="M:MemoAna.Services.GreeterService.SayHello(MemoAna.HelloRequest,Grpc.Core.ServerCallContext)">
+            <summary>Returns a greeting for the supplied name.</summary>
+            <param name="request">The gRPC greeting request.</param>
+            <param name="context">The current gRPC call context.</param>
+            <returns>A greeting response containing the requested name.</returns>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingReflection">
+            <summary>Holder for reflection information generated from Protos/game_matchmaking.proto</summary>
+        </member>
+        <member name="P:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingReflection.Descriptor">
+            <summary>File descriptor for Protos/game_matchmaking.proto</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.ClientCommand">
+            <summary>
+            ClientCommand expresses an intent. It must not contain authoritative score,
+            winner, turn ownership, board state, or lifecycle results.
+            </summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ClientCommand.MetadataFieldNumber">
+            <summary>Field number for the "metadata" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ClientCommand.JoinFieldNumber">
+            <summary>Field number for the "join" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ClientCommand.ReadyFieldNumber">
+            <summary>Field number for the "ready" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ClientCommand.LeaveFieldNumber">
+            <summary>Field number for the "leave" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ClientCommand.GameplayFieldNumber">
+            <summary>Field number for the "gameplay" field.</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.ClientCommand.CommandOneofCase">
+            <summary>Enum of possible cases for the "command" oneof.</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.CommandMetadata">
+            <summary>
+            Metadata used to correlate commands and support future idempotency checks.
+            </summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.CommandMetadata.CommandIdFieldNumber">
+            <summary>Field number for the "command_id" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.CommandMetadata.ClientSequenceFieldNumber">
+            <summary>Field number for the "client_sequence" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.CommandMetadata.IdentityFieldNumber">
+            <summary>Field number for the "identity" field.</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.SessionIdentity">
+            <summary>
+            Session and player identifiers are assigned by the server. Values supplied
+            by a client are context/correlation data only and never replace server state.
+            </summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.SessionIdentity.MatchIdFieldNumber">
+            <summary>Field number for the "match_id" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.SessionIdentity.SessionIdFieldNumber">
+            <summary>Field number for the "session_id" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.SessionIdentity.PlayerIdFieldNumber">
+            <summary>Field number for the "player_id" field.</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.JoinSession">
+            <summary>
+            Requests entry into a session. Empty identity fields are valid while the
+            server assigns the session and player identifiers.
+            </summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ReadyUp.ReadyFieldNumber">
+            <summary>Field number for the "ready" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.LeaveSession.ReasonFieldNumber">
+            <summary>Field number for the "reason" field.</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.GameplayIntent">
+            <summary>
+            GameplayIntent contains only player intent. The server derives the result
+            from authoritative state.
+            </summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.GameplayIntent.FlipCardFieldNumber">
+            <summary>Field number for the "flip_card" field.</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.GameplayIntent.ActionOneofCase">
+            <summary>Enum of possible cases for the "action" oneof.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.FlipCardIntent.PositionFieldNumber">
+            <summary>Field number for the "position" field.</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.ServerEvent">
+            <summary>
+            ServerEvent contains an authoritative fact or result.
+            </summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.MetadataFieldNumber">
+            <summary>Field number for the "metadata" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.SessionCreatedFieldNumber">
+            <summary>Field number for the "session_created" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.JoinAcceptedFieldNumber">
+            <summary>Field number for the "join_accepted" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.SessionStateChangedFieldNumber">
+            <summary>Field number for the "session_state_changed" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.ReadyStateChangedFieldNumber">
+            <summary>Field number for the "ready_state_changed" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.GameStartedFieldNumber">
+            <summary>Field number for the "game_started" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.CommandAcceptedFieldNumber">
+            <summary>Field number for the "command_accepted" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.GameplayUpdateFieldNumber">
+            <summary>Field number for the "gameplay_update" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.CommandRejectedFieldNumber">
+            <summary>Field number for the "command_rejected" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.PlayerLeftFieldNumber">
+            <summary>Field number for the "player_left" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.SessionFinishedFieldNumber">
+            <summary>Field number for the "session_finished" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.ProtocolErrorFieldNumber">
+            <summary>Field number for the "protocol_error" field.</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.ServerEvent.EventOneofCase">
+            <summary>Enum of possible cases for the "event" oneof.</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.ServerEventMetadata">
+            <summary>
+            server_event_sequence is transport ordering and state_version is the
+            authoritative state revision. They are intentionally separate from the
+            client command sequence.
+            </summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEventMetadata.ServerEventSequenceFieldNumber">
+            <summary>Field number for the "server_event_sequence" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEventMetadata.StateVersionFieldNumber">
+            <summary>Field number for the "state_version" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEventMetadata.IdentityFieldNumber">
+            <summary>Field number for the "identity" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ServerEventMetadata.CorrelatedCommandIdFieldNumber">
+            <summary>Field number for the "correlated_command_id" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.JoinAccepted.PlayerFieldNumber">
+            <summary>Field number for the "player" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.JoinAccepted.ConnectedPlayersFieldNumber">
+            <summary>Field number for the "connected_players" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.SessionStateChanged.StateFieldNumber">
+            <summary>Field number for the "state" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ReadyStateChanged.PlayerIdFieldNumber">
+            <summary>Field number for the "player_id" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ReadyStateChanged.ReadyFieldNumber">
+            <summary>Field number for the "ready" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.GameStarted.FirstPlayerIdFieldNumber">
+            <summary>Field number for the "first_player_id" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.CommandAccepted.CommandIdFieldNumber">
+            <summary>Field number for the "command_id" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.GameplayUpdate.CardFlipAcceptedFieldNumber">
+            <summary>Field number for the "card_flip_accepted" field.</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.GameplayUpdate.UpdateOneofCase">
+            <summary>Enum of possible cases for the "update" oneof.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.CardFlipAccepted.PositionFieldNumber">
+            <summary>Field number for the "position" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.CommandRejected.CodeFieldNumber">
+            <summary>Field number for the "code" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.CommandRejected.ReasonFieldNumber">
+            <summary>Field number for the "reason" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.PlayerLeft.PlayerIdFieldNumber">
+            <summary>Field number for the "player_id" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.PlayerLeft.ReasonFieldNumber">
+            <summary>Field number for the "reason" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.SessionFinished.TerminalStateFieldNumber">
+            <summary>Field number for the "terminal_state" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.SessionFinished.ResultFieldNumber">
+            <summary>Field number for the "result" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.SessionFinished.WinnerPlayerIdFieldNumber">
+            <summary>Field number for the "winner_player_id" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ProtocolError.CodeFieldNumber">
+            <summary>Field number for the "code" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.ProtocolError.MessageFieldNumber">
+            <summary>Field number for the "message" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.PlayerSlot.PlayerIdFieldNumber">
+            <summary>Field number for the "player_id" field.</summary>
+        </member>
+        <member name="F:MemoAna.Proto.GameMatchmaking.V1.PlayerSlot.SlotFieldNumber">
+            <summary>Field number for the "slot" field.</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService">
+             <summary>
+             GameMatchmakingService is the transport boundary for one PVP session.
+            
+             Compatibility rules:
+             - Never reuse a field or enum number. Reserve numbers when removing them.
+             - Add fields and enum values in a backward-compatible way.
+             - Breaking changes require a new versioned package and contract strategy.
+             </summary>
+        </member>
+        <member name="P:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.Descriptor">
+            <summary>Service descriptor</summary>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceBase">
+            <summary>Base class for server-side implementations of GameMatchmakingService</summary>
+        </member>
+        <member name="M:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceBase.Connect(Grpc.Core.IAsyncStreamReader{MemoAna.Proto.GameMatchmaking.V1.ClientCommand},Grpc.Core.IServerStreamWriter{MemoAna.Proto.GameMatchmaking.V1.ServerEvent},Grpc.Core.ServerCallContext)">
+            <summary>
+            Opens a long-lived bidirectional command/event stream.
+            </summary>
+            <param name="requestStream">Used for reading requests from the client.</param>
+            <param name="responseStream">Used for sending responses back to the client.</param>
+            <param name="context">The context of the server-side call handler being invoked.</param>
+            <returns>A task indicating completion of the handler.</returns>
+        </member>
+        <member name="T:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceClient">
+            <summary>Client for GameMatchmakingService</summary>
+        </member>
+        <member name="M:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceClient.#ctor(Grpc.Core.ChannelBase)">
+            <summary>Creates a new client for GameMatchmakingService</summary>
+            <param name="channel">The channel to use to make remote calls.</param>
+        </member>
+        <member name="M:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceClient.#ctor(Grpc.Core.CallInvoker)">
+            <summary>Creates a new client for GameMatchmakingService that uses a custom <c>CallInvoker</c>.</summary>
+            <param name="callInvoker">The callInvoker to use to make remote calls.</param>
+        </member>
+        <member name="M:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceClient.#ctor">
+            <summary>Protected parameterless constructor to allow creation of test doubles.</summary>
+        </member>
+        <member name="M:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceClient.#ctor(Grpc.Core.ClientBase.ClientBaseConfiguration)">
+            <summary>Protected constructor to allow creation of configured clients.</summary>
+            <param name="configuration">The client configuration.</param>
+        </member>
+        <member name="M:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceClient.Connect(Grpc.Core.Metadata,System.Nullable{System.DateTime},System.Threading.CancellationToken)">
+            <summary>
+            Opens a long-lived bidirectional command/event stream.
+            </summary>
+            <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+            <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+            <param name="cancellationToken">An optional token for canceling the call.</param>
+            <returns>The call object.</returns>
+        </member>
+        <member name="M:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceClient.Connect(Grpc.Core.CallOptions)">
+            <summary>
+            Opens a long-lived bidirectional command/event stream.
+            </summary>
+            <param name="options">The options for the call.</param>
+            <returns>The call object.</returns>
+        </member>
+        <member name="M:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceClient.NewInstance(Grpc.Core.ClientBase.ClientBaseConfiguration)">
+            <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
+        </member>
+        <member name="M:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.BindService(MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceBase)">
+            <summary>Creates service definition that can be registered with a server</summary>
+            <param name="serviceImpl">An object implementing the server-side handling logic.</param>
+        </member>
+        <member name="M:MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.BindService(Grpc.Core.ServiceBinderBase,MemoAna.Proto.GameMatchmaking.V1.GameMatchmakingService.GameMatchmakingServiceBase)">
+            <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
+            Note: this method is part of an experimental API that can change or be removed without any prior notice.</summary>
+            <param name="serviceBinder">Service methods will be bound by calling <c>AddMethod</c> on this object.</param>
+            <param name="serviceImpl">An object implementing the server-side handling logic.</param>
+        </member>
+        <member name="T:MemoAna.GreetReflection">
+            <summary>Holder for reflection information generated from Protos/greet.proto</summary>
+        </member>
+        <member name="P:MemoAna.GreetReflection.Descriptor">
+            <summary>File descriptor for Protos/greet.proto</summary>
+        </member>
+        <member name="F:MemoAna.HelloRequest.NameFieldNumber">
+            <summary>Field number for the "name" field.</summary>
+        </member>
+        <member name="F:MemoAna.HelloReply.MessageFieldNumber">
+            <summary>Field number for the "message" field.</summary>
+        </member>
+        <member name="P:MemoAna.Greeter.Descriptor">
+            <summary>Service descriptor</summary>
+        </member>
+        <member name="T:MemoAna.Greeter.GreeterBase">
+            <summary>Base class for server-side implementations of Greeter</summary>
+        </member>
+        <member name="M:MemoAna.Greeter.BindService(MemoAna.Greeter.GreeterBase)">
+            <summary>Creates service definition that can be registered with a server</summary>
+            <param name="serviceImpl">An object implementing the server-side handling logic.</param>
+        </member>
+        <member name="M:MemoAna.Greeter.BindService(Grpc.Core.ServiceBinderBase,MemoAna.Greeter.GreeterBase)">
+            <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
+            Note: this method is part of an experimental API that can change or be removed without any prior notice.</summary>
+            <param name="serviceBinder">Service methods will be bound by calling <c>AddMethod</c> on this object.</param>
+            <param name="serviceImpl">An object implementing the server-side handling logic.</param>
+        </member>
+        <member name="T:Program">
+            <summary>Exposes the generated application type used by integration tests and the ASP.NET Core host.</summary>
+        </member>
+    </members>
+</doc>
