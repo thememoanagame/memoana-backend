@@ -50,10 +50,10 @@ public sealed class SessionRuntimeTests
     {
         await using var registry = new SessionRuntimeRegistry();
         var runtime = registry.Create(Session, Match);
-        await using var events = runtime.Subscribe().GetAsyncEnumerator();
+        await using var events = runtime.Subscribe(TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
-        var first = await runtime.SubmitAsync(new JoinSessionCommand("join-1", PlayerOne));
-        var second = await runtime.SubmitAsync(new JoinSessionCommand("join-2", PlayerTwo));
+        var first = await runtime.SubmitAsync(new JoinSessionCommand("join-1", PlayerOne), TestContext.Current.CancellationToken);
+        var second = await runtime.SubmitAsync(new JoinSessionCommand("join-2", PlayerTwo), TestContext.Current.CancellationToken);
 
         Assert.True(first.Accepted);
         Assert.True(second.Accepted);
@@ -68,7 +68,7 @@ public sealed class SessionRuntimeTests
     {
         await using var registry = new SessionRuntimeRegistry();
         var runtime = registry.Create(Session, Match);
-        await runtime.SubmitAsync(new JoinSessionCommand("join-1", PlayerOne));
+        await runtime.SubmitAsync(new JoinSessionCommand("join-1", PlayerOne), TestContext.Current.CancellationToken);
 
         var submissions = await Task.WhenAll(
             Task.Run(() => runtime.SubmitAsync(new JoinSessionCommand("join-2", PlayerTwo))),
@@ -91,8 +91,8 @@ public sealed class SessionRuntimeTests
         });
         var runtime = registry.Create(Session, Match);
 
-        var first = runtime.SubmitAsync(new JoinSessionCommand("join-1", PlayerOne));
-        var second = runtime.SubmitAsync(new JoinSessionCommand("join-2", PlayerTwo));
+        var first = runtime.SubmitAsync(new JoinSessionCommand("join-1", PlayerOne), TestContext.Current.CancellationToken);
+        var second = runtime.SubmitAsync(new JoinSessionCommand("join-2", PlayerTwo), TestContext.Current.CancellationToken);
 
         var results = await Task.WhenAll(first, second);
 
@@ -106,13 +106,13 @@ public sealed class SessionRuntimeTests
         await using var registry = new SessionRuntimeRegistry();
         var runtime = registry.Create(Session, Match);
 
-        var result = await runtime.SubmitAsync(new AbortSessionCommand("abort"));
+        var result = await runtime.SubmitAsync(new AbortSessionCommand("abort"), TestContext.Current.CancellationToken);
         await runtime.Completion;
 
         Assert.True(result.Accepted);
         Assert.False(registry.TryGet(Session, out _));
         await Assert.ThrowsAsync<ObjectDisposedException>(
-            () => runtime.SubmitAsync(new StartGameCommand("after-abort")));
+            () => runtime.SubmitAsync(new StartGameCommand("after-abort"), TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -135,13 +135,13 @@ public sealed class SessionRuntimeTests
         await using var registry = new SessionRuntimeRegistry();
         var runtime = registry.Create(Session, Match);
         using var cancellation = new CancellationTokenSource();
-        await using var events = runtime.Subscribe(cancellation.Token).GetAsyncEnumerator();
+        await using var events = runtime.Subscribe(cancellation.Token).GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             async () => await events.MoveNextAsync());
-        var result = await runtime.SubmitAsync(new JoinSessionCommand("join-1", PlayerOne));
+        var result = await runtime.SubmitAsync(new JoinSessionCommand("join-1", PlayerOne), TestContext.Current.CancellationToken);
 
         Assert.True(result.Accepted);
         Assert.False(runtime.IsClosed);
@@ -171,10 +171,10 @@ public sealed class SessionRuntimeTests
             EventCapacity = 1
         });
         var runtime = registry.Create(Session, Match);
-        await using var events = runtime.Subscribe().GetAsyncEnumerator();
+        await using var events = runtime.Subscribe(TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
-        var first = await runtime.SubmitAsync(new JoinSessionCommand("join-1", PlayerOne));
-        var second = runtime.SubmitAsync(new JoinSessionCommand("join-2", PlayerTwo));
+        var first = await runtime.SubmitAsync(new JoinSessionCommand("join-1", PlayerOne), TestContext.Current.CancellationToken);
+        var second = runtime.SubmitAsync(new JoinSessionCommand("join-2", PlayerTwo), TestContext.Current.CancellationToken);
 
         Assert.True(first.Accepted);
         Assert.False(second.IsCompleted);

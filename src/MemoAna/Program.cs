@@ -1,8 +1,14 @@
+using MemoAna.Application.Matchmaking;
+using MemoAna.Infrastructure.Sessions;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddGrpc();
 builder.Services.AddControllers();
+builder.Services.AddSingleton<SessionRuntimeRegistry>();
+builder.Services.AddSingleton<IMatchSessionRuntimeFactory, SessionRuntimeFactory>();
+builder.Services.AddSingleton<InMemoryMatchmaking>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
