@@ -84,7 +84,7 @@
       <QualityGateBranchPassed>$([MSBuild]::GreaterThanOrEqual($(QualityGateBranchCoverage), $(QualityGateThreshold)))</QualityGateBranchPassed>
     </PropertyGroup>
 
-    <Message Importance="High" Text="Line Coverage:   $(QualityGateLineCoverage)% [$([System.String]::Copy('PASSED').Trim())]" Condition="'$(QualityGateLinePassed)' == 'true'" />
+    <Message Importance="High" Text="Line Coverage:   $(QualityGateLineCoverage)% [PASSED]" Condition="'$(QualityGateLinePassed)' == 'true'" />
     <Message Importance="High" Text="Line Coverage:   $(QualityGateLineCoverage)% [FAILED]" Condition="'$(QualityGateLinePassed)' != 'true'" />
     <Message Importance="High" Text="Branch Coverage: $(QualityGateBranchCoverage)% [PASSED]" Condition="'$(QualityGateBranchPassed)' == 'true'" />
     <Message Importance="High" Text="Branch Coverage: $(QualityGateBranchCoverage)% [FAILED]" Condition="'$(QualityGateBranchPassed)' != 'true'" />
