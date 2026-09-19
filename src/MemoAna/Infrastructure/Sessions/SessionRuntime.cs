@@ -4,6 +4,8 @@ using MemoAna.Domain.Sessions;
 
 namespace MemoAna.Infrastructure.Sessions;
 
+/// <summary>Serializes commands for one authoritative session and publishes its resulting events.</summary>
+/// <remarks>The bounded command queue guarantees a single reader, making <see cref="MatchSession"/> mutation deterministic.</remarks>
 public sealed class SessionRuntime : IAsyncDisposable
 {
     private readonly Channel<PendingCommand> _commands;
@@ -39,10 +41,20 @@ public sealed class SessionRuntime : IAsyncDisposable
         _processor = ProcessCommandsAsync();
     }
 
+    /// <summary>Gets the authoritative session owned by this runtime.</summary>
     public MatchSession Session { get; }
+    /// <summary>Gets the task representing the runtime processor lifetime.</summary>
     public Task Completion => _processor;
+    /// <summary>Gets whether shutdown has started.</summary>
     public bool IsClosed => Volatile.Read(ref _shutdownStarted) != 0;
 
+    /// <summary>Queues a command and asynchronously waits for its authoritative result.</summary>
+    /// <param name="command">The command to process.</param>
+    /// <param name="cancellationToken">The token used to cancel queueing or waiting.</param>
+    /// <returns>The authoritative command result.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="command"/> is null.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when cancellation is requested.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the runtime is closed.</exception>
     public async Task<SessionCommandResult> SubmitAsync(
         SessionCommand command,
         CancellationToken cancellationToken = default)
@@ -63,6 +75,9 @@ public sealed class SessionRuntime : IAsyncDisposable
         return await pending.Completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Subscribes to future authoritative events.</summary>
+    /// <param name="cancellationToken">The token used to stop enumeration.</param>
+    /// <returns>An asynchronous sequence of session events.</returns>
     public IAsyncEnumerable<SessionEvent> Subscribe(
         CancellationToken cancellationToken = default)
     {
@@ -78,6 +93,8 @@ public sealed class SessionRuntime : IAsyncDisposable
         return ReadEventsAsync(subscriber, cancellationToken);
     }
 
+    /// <summary>Stops command processing, completes subscribers, and waits for processor termination.</summary>
+    /// <returns>A value task that completes when shutdown finishes.</returns>
     public ValueTask DisposeAsync()
     {
         BeginShutdown();
@@ -139,6 +156,7 @@ public sealed class SessionRuntime : IAsyncDisposable
         subscriber.Channel.Writer.TryComplete();
     }
 
+    /// <remarks>Commands are applied before their events are published to preserve authoritative ordering.</remarks>
     private async Task ProcessCommandsAsync()
     {
         try

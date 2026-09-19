@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/.github/" />
+  <Folder Name="/.github/workflows/">
+    <File Path=".github/workflows/integration-testing-delivery.yml" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/MemoAna/MemoAna.csproj" />
   </Folder>

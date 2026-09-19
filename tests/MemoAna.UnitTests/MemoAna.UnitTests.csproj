@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -55,7 +55,7 @@
 
     <Error Condition="'$(QualityGateTestExitCode)' != '0'" Text="Quality Gate aborted: unit tests failed with exit code $(QualityGateTestExitCode)." />
 
-    <Exec Command="dotnet tool run reportgenerator -reports:&quot;$(QualityGateCoveragePattern)&quot; -targetdir:&quot;$(QualityGateReportDirectory)&quot; -reporttypes:MarkdownSummary;TextSummary -assemblyfilters:&quot;+MemoAna*;-FluentValidation*;-Mediator*&quot; -minimumCoverageThresholds:lineCoverage=$(QualityGateThreshold) -minimumCoverageThresholds:branchCoverage=$(QualityGateThreshold)" ContinueOnError="true">
+    <Exec Command="dotnet tool run reportgenerator -reports:&quot;$(QualityGateCoveragePattern)&quot; -targetdir:&quot;$(QualityGateReportDirectory)&quot; -reporttypes:&quot;MarkdownSummary;TextSummary&quot; -assemblyfilters:&quot;+MemoAna*;-FluentValidation*;-Mediator*&quot; -minimumCoverageThresholds:lineCoverage=$(QualityGateThreshold) -minimumCoverageThresholds:branchCoverage=$(QualityGateThreshold)" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="QualityGateReportGeneratorExitCode" />
     </Exec>
 
@@ -137,7 +137,6 @@
 
     <Message Importance="High" Text="============================================================" />
 
-    <Exec Command="rm -r -Force &quot;$(MSBuildProjectFullPath)\TestResults\*&quot;" ContinueOnError="true" />
   </Target>
 
 </Project>

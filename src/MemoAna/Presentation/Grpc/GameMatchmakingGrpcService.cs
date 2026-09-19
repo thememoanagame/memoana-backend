@@ -12,6 +12,8 @@ using ProtoPlayerSlot = MemoAna.Proto.GameMatchmaking.V1.PlayerSlot;
 
 namespace MemoAna.Presentation.Grpc;
 
+/// <summary>Adapts the authoritative matchmaking/session application boundary to the bidirectional gRPC protocol.</summary>
+/// <remarks>This adapter validates transport input, maps protobuf messages to domain commands, and publishes authoritative events without owning domain state.</remarks>
 public sealed class GameMatchmakingGrpcService(
     IMatchmakingSessionGateway matchmaking)
     : GameMatchmakingService.GameMatchmakingServiceBase
@@ -20,6 +22,13 @@ public sealed class GameMatchmakingGrpcService(
     private const int MaximumIdentityLength = 256;
     private const int MaximumReasonLength = 512;
 
+    /// <summary>Maintains one bidirectional stream for matchmaking and authoritative session commands/events.</summary>
+    /// <param name="requestStream">The inbound client command stream.</param>
+    /// <param name="responseStream">The outbound server event stream.</param>
+    /// <param name="context">The gRPC call context and connection cancellation token.</param>
+    /// <returns>A task that completes when the client stream ends or the connection is cancelled.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when a required stream argument is null.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the connection is cancelled while asynchronous stream processing is active.</exception>
     public override async Task Connect(
         IAsyncStreamReader<ClientCommand> requestStream,
         IServerStreamWriter<ServerEvent> responseStream,
@@ -67,6 +76,7 @@ public sealed class GameMatchmakingGrpcService(
         }
     }
 
+    /// <remarks>The stream is bound to a server-generated player key after the first valid join; client-supplied identities are treated as correlation data and never as an authorization source.</remarks>
     private async Task ReadCommandsAsync(
         IAsyncStreamReader<ClientCommand> requestStream,
         ChannelWriter<ServerEvent> output,
@@ -196,6 +206,7 @@ public sealed class GameMatchmakingGrpcService(
             : null;
     }
 
+    /// <remarks>Session events are read from the runtime subscription and converted without altering their authoritative sequence or state version.</remarks>
     private async Task PublishSessionEventsAsync(
         MatchFound match,
         ChannelWriter<ServerEvent> output,
@@ -251,6 +262,7 @@ public sealed class GameMatchmakingGrpcService(
         }, cancellationToken);
     }
 
+    /// <remarks>Only protocol intents are converted to domain commands; authoritative outcomes are never accepted from the client payload.</remarks>
     private static SessionCommand? ToDomainCommand(ClientCommand command, MatchFound match) =>
         command.CommandCase switch
         {
@@ -274,6 +286,7 @@ public sealed class GameMatchmakingGrpcService(
             _ => null
         };
 
+    /// <remarks>Every mapped event preserves the authoritative sequence and state version supplied by the session.</remarks>
     private static ServerEvent ToServerEvent(SessionEvent @event, MatchFound match)
     {
         var metadata = Metadata(match, @event.Sequence, @event.StateVersion);
@@ -374,6 +387,7 @@ public sealed class GameMatchmakingGrpcService(
     private static ServerEvent ProtocolError(ProtocolErrorCode code, string message) =>
         new() { ProtocolError = new ProtocolError { Code = code, Message = message } };
 
+    /// <remarks>Validation rejects malformed transport input before it reaches matchmaking or the authoritative session.</remarks>
     private static bool TryValidate(ClientCommand command, out ServerEvent? error)
     {
         error = null;

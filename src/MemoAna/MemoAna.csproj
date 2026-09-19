@@ -4,6 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>$(MSBuildProjectDirectory)\Docs\$(AssemblyName).xml</DocumentationFile>
+    <WarningsAsErrors>CS1591</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +16,6 @@
 
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.83.0" />
-    <PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.12" />
   </ItemGroup>
 
 </Project>

@@ -2,9 +2,19 @@ using MemoAna.Domain.Matchmaking;
 
 namespace MemoAna.Domain.Sessions;
 
+/// <summary>
+/// Owns the authoritative state and legal transitions for one PVP match session.
+/// </summary>
+/// <remarks>
+/// <see cref="MatchSession"/> is intentionally independent from networking. Commands are expected to be
+/// serialized by <c>SessionRuntime</c>; callers must not concurrently mutate or invoke the session.
+/// </remarks>
 public sealed class MatchSession
 {
+    /// <summary>Gets the maximum number of players supported by a session.</summary>
     public const int MaximumPlayers = 2;
+
+    /// <summary>Gets the number of board positions in the current game model.</summary>
     public const int BoardSize = 8;
 
     private readonly Dictionary<PlayerIdentity, PlayerSlot> _players = [];
@@ -19,17 +29,61 @@ public sealed class MatchSession
         Game = new AuthoritativeGameState([]);
     }
 
+    /// <summary>
+    /// Gets the server-assigned session identity.
+    /// </summary>
     public SessionIdentity Session { get; }
+
+    /// <summary>
+    /// Gets the optional match identity associated with the session.
+    /// </summary>
     public MatchIdentity? Match { get; }
+
+    /// <summary>
+    /// Gets the current authoritative lifecycle state.
+    /// </summary>
     public SessionLifecycle State { get; private set; }
+
+    /// <summary>
+    /// Gets the monotonically increasing authoritative state version.
+    /// </summary>
     public ulong StateVersion { get; private set; }
+
+    /// <summary>
+    /// Gets the most recently emitted authoritative event sequence.
+    /// </summary>
     public ulong LastEventSequence { get; private set; }
+
+    /// <summary>
+    /// Gets the players currently bound to the session and their server-assigned slots.
+    /// </summary>
     public IReadOnlyDictionary<PlayerIdentity, PlayerSlot> Players => _players;
+
+    /// <summary>
+    /// Gets the authoritative game state.
+    /// </summary>
     public AuthoritativeGameState Game { get; private set; }
 
+    /// <summary>
+    /// Creates an empty match session.
+    /// </summary>
+    /// <param name="session">The server-assigned session identity.</param>
+    /// <param name="match">The optional server-assigned match identity.</param>
+    /// <returns>A new session in <see cref="SessionLifecycle.WaitingForPlayers"/>.</returns>
     public static MatchSession Create(SessionIdentity session, MatchIdentity? match = null) =>
         new(session, match);
 
+    /// <summary>
+    /// Processes one command against the authoritative session state.
+    /// </summary>
+    /// <param name="command">The command to process.</param>
+    /// <returns>An accepted result containing authoritative events, or a rejection result describing why the command was not applied.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="command"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown only if an invariant required by an accepted gameplay transition cannot be satisfied by the current authoritative state.</exception>
+    /// <remarks>
+    /// Duplicate command identifiers are rejected deterministically. Client sequence numbers are checked per player,
+    /// while system commands bypass client ordering. Accepted transitions advance the event sequence and state version.
+    /// </remarks>
     public SessionCommandResult Handle(SessionCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -51,6 +105,8 @@ public sealed class MatchSession
             return validation;
         }
 
+        // Command handling remains centralized here so lifecycle, identity, ordering,
+        // and authoritative game-state mutations share one deterministic transition point.
         var result = command switch
         {
             JoinSessionCommand join => Join(join),
