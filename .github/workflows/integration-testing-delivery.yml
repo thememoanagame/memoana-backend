@@ -71,7 +71,7 @@ jobs:
             exit 1
         }
         
-        $content = Get-Content$summaryFile -Raw
+        $content = Get-Content $summaryFile -Raw
         $threshold = [double]$env:QUALITY_GRADE_THRESHOLD
 
         # Extração dos dados do cabeçalho do Summary.txt
