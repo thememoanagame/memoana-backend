@@ -133,15 +133,15 @@ jobs:
 
         if ($lineRate -lt $threshold) {
             $failed = $true
-            $failures += "Line coverage ($([math]::Round($lineRate, 2))\%) is below the required$threshold%."
+            $failures += "Line coverage ($([math]::Round($lineRate, 2))\%) is below the required $threshold%."
         }
         if ($branchRate -lt $threshold) {
            $failed = $true
-           $failures += "Branch coverage ($([math]::Round($branchRate, 2))\%) is below the required$threshold%."
+           $failures += "Branch coverage ($([math]::Round($branchRate, 2))\%) is below the required $threshold%."
         }
         if ($methodRate -lt $threshold) {
             $failed = $true
-            $failures += "Method coverage ($([math]::Round($methodRate, 2))\%) is below the required$threshold%."
+            $failures += "Method coverage ($([math]::Round($methodRate, 2))\%) is below the required $threshold%."
         }
 
         if ($failed) {
