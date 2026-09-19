@@ -46,6 +46,17 @@ jobs:
         "dotnet test exit code: $exitCode" | Add-Content -Path $outputFile
         "TEST_EXIT_CODE=$exitCode" | Out-File -FilePath ${{ env.TEST_RESULTS_DIR }}/QualityGate/test-exit-code.txt -Encoding utf8
 
+    - name: Debug generated artifacts
+      run: |
+        ls -R ${{ env.TEST_RESULTS_DIR }}
+  
+    - name: Upload test output
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: Continuous-Testing-Output
+        path: ${{ env.TEST_RESULTS_DIR }}/test-output.txt
+
     - name: Publish Test Summary
       uses: dorny/test-reporter@v1
       if: always()
@@ -58,7 +69,7 @@ jobs:
       if: always()
       shell: pwsh
       run: |
-        $coverageFiles = @(Get-ChildItem -Path "${{ env.TEST_RESULTS_DIR }}/QualityGate" -Filter 'coverage*.xml' -Recurse -File -ErrorAction SilentlyContinue)
+        $coverageFiles = @(Resolve-Path "${{ env.TEST_RESULTS_DIR }}/QualityGate" 'coverage*.xml') 
         if ($coverageFiles.Count -gt 0) {
           dotnet tool run reportgenerator -reports:"./${{ env.TEST_RESULTS_DIR }}/QualityGate/*.xml" -targetdir:"./${{ env.TEST_RESULTS_DIR }}/QualityGate" "-reporttypes:Markdown;cobertura" "-assemblyfilters:+MemoAna.Backend*;-FluentValidation*;-Mediator*" "-classfilters:+*;-AspNetCoreGeneratedDocument*;-*Components*;-*.Components.*;-*.Pages.*;-*.Layout.*;-*.Shared.*;-*.Migrations.*" "-filefilters:-**/*.razor;-**/*.razor.cs;-**/obj/**/*.cs;-**/*.g.cs;-**/*LoggerMessageGenerator*/*"
         } else {
