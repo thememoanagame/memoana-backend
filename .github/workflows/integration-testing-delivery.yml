@@ -69,7 +69,7 @@ jobs:
       if: always()
       shell: pwsh
       run: |
-        $coverageFiles = @(Resolve-Path "${{ env.TEST_RESULTS_DIR }}/QualityGate" 'coverage*.xml') 
+        $coverageFiles = @(Resolve-Path "${{ env.TEST_RESULTS_DIR }}/QualityGate/coverage*.xml') 
         if ($coverageFiles.Count -gt 0) {
           dotnet tool run reportgenerator -reports:"./${{ env.TEST_RESULTS_DIR }}/QualityGate/*.xml" -targetdir:"./${{ env.TEST_RESULTS_DIR }}/QualityGate" "-reporttypes:Markdown;cobertura" "-assemblyfilters:+MemoAna.Backend*;-FluentValidation*;-Mediator*" "-classfilters:+*;-AspNetCoreGeneratedDocument*;-*Components*;-*.Components.*;-*.Pages.*;-*.Layout.*;-*.Shared.*;-*.Migrations.*" "-filefilters:-**/*.razor;-**/*.razor.cs;-**/obj/**/*.cs;-**/*.g.cs;-**/*LoggerMessageGenerator*/*"
         } else {
@@ -80,7 +80,7 @@ jobs:
       if: always()
       shell: pwsh
       run: |
-        $coverageFile = Resolve-Path ${{ env.TEST_RESULTS_DIR }} 'QualityGate/cobertura*.xml'
+        $coverageFile = Resolve-Path '${{ env.TEST_RESULTS_DIR }}/QualityGate/cobertura*.xml'
         if (-not (Test-Path $coverageFile)) {
           "## Coverage gate`n`nThe filtered ReportGenerator Cobertura report was not produced." | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           Write-Error "Filtered coverage data was not produced."
