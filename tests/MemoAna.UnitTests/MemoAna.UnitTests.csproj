@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
     <TestingPlatformCommandLineArguments>--report-trx --report-trx-filename test-results.trx --coverlet --coverlet-output-format cobertura --coverlet-include "[MemoAna]*,[MemoAna.Application]*,[MemoAna.Domain]*,[MemoAna.Infrastructure]*" --coverlet-exclude "[*.Migrations]*,[*.UnitTests]*,[Mediator*]*,[FluentValidation*]*"</TestingPlatformCommandLineArguments>
     <QualityGateThreshold>80</QualityGateThreshold>
     <QualityGateResultsDirectory>$(MSBuildProjectDirectory)/TestResults/QualityGate</QualityGateResultsDirectory>
