@@ -1,0 +1,11 @@
+services:
+  memoana:
+    image: ${DOCKER_REGISTRY-}memoana
+    build:
+      context: .
+      dockerfile: src/MemoAna/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "8000" 
+    
