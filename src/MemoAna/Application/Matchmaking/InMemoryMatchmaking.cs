@@ -3,8 +3,10 @@ using MemoAna.Domain.Sessions;
 
 namespace MemoAna.Application.Matchmaking;
 
+/// <summary>Configures the bounds of the in-memory matchmaking queue.</summary>
 public sealed record MatchmakingOptions
 {
+    /// <summary>Gets the maximum number of active waiting players.</summary>
     public int MaximumWaitingPlayers { get; init; } = 1024;
 
     internal void Validate()
@@ -18,6 +20,8 @@ public sealed record MatchmakingOptions
     }
 }
 
+/// <summary>Provides process-local, thread-safe matchmaking and session lookup.</summary>
+/// <remarks>Pairing is serialized under a private gate; session command mutation remains serialized by each session runtime.</remarks>
 public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionGateway
 {
     private readonly object _gate = new();
@@ -47,6 +51,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         _options.Validate();
     }
 
+    /// <summary>Gets the number of currently waiting players.</summary>
     public int WaitingCount
     {
         get
@@ -58,6 +63,14 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         }
     }
 
+    /// <summary>Registers a player and either waits or completes a compatible pair.</summary>
+    /// <param name="request">The matchmaking request.</param>
+    /// <param name="cancellationToken">The token used to cancel the operation.</param>
+    /// <returns>The current matchmaking result.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="request"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when the request contains an invalid player key.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when cancellation is requested.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when matchmaking has been disposed.</exception>
     public Task<MatchmakingResult> JoinAsync(
         JoinMatchmakingRequest request,
         CancellationToken cancellationToken = default)
@@ -123,6 +136,13 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         return CompletePairingAsync(opponent, incoming, cancellationToken);
     }
 
+    /// <summary>Cancels a player's active waiting request.</summary>
+    /// <param name="request">The cancellation request.</param>
+    /// <param name="cancellationToken">The token used to cancel the operation.</param>
+    /// <returns>The cancellation outcome.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="request"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when the player key is invalid.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when cancellation is requested.</exception>
     public Task<MatchmakingResult> CancelAsync(
         CancelMatchmakingRequest request,
         CancellationToken cancellationToken = default)
@@ -172,6 +192,12 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         return Task.FromResult(result);
     }
 
+    /// <summary>Waits for an active request to become matched.</summary>
+    /// <param name="playerKey">The player key to await.</param>
+    /// <param name="cancellationToken">The token used to cancel the wait.</param>
+    /// <returns>The current or eventual matchmaking result.</returns>
+    /// <exception cref="ArgumentException">Thrown when the player key is invalid.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when cancellation is requested.</exception>
     public async Task<MatchmakingResult> WaitForMatchAsync(
         string playerKey,
         CancellationToken cancellationToken = default)
@@ -206,6 +232,11 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         return await entry.Completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Attempts to subscribe to events from a matched session.</summary>
+    /// <param name="session">The session identity.</param>
+    /// <param name="cancellationToken">The token used to cancel subscription creation.</param>
+    /// <param name="events">The event stream when found.</param>
+    /// <returns><see langword="true"/> when the session exists.</returns>
     public bool TrySubscribe(
         SessionIdentity session,
         CancellationToken cancellationToken,
@@ -225,6 +256,10 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         return false;
     }
 
+    /// <summary>Attempts to retrieve the runtime associated with a matched session.</summary>
+    /// <param name="session">The session identity.</param>
+    /// <param name="runtime">The runtime when found.</param>
+    /// <returns><see langword="true"/> when the runtime exists.</returns>
     public bool TryGetRuntime(
         SessionIdentity session,
         out IMatchSessionRuntime? runtime)
@@ -235,6 +270,8 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         }
     }
 
+    /// <summary>Stops matchmaking and completes all active waiting requests.</summary>
+    /// <returns>A value task that completes after active waiters are released.</returns>
     public ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
