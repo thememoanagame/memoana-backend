@@ -1,0 +1,198 @@
+syntax = "proto3";
+
+option csharp_namespace = "MemoAna.Proto.GameMatchmaking.V1";
+
+package memoana.game_matchmaking.v1;
+
+// GameMatchmakingService is the transport boundary for one PVP session.
+//
+// Compatibility rules:
+// - Never reuse a field or enum number. Reserve numbers when removing them.
+// - Add fields and enum values in a backward-compatible way.
+// - Breaking changes require a new versioned package and contract strategy.
+service GameMatchmakingService {
+  // Opens a long-lived bidirectional command/event stream.
+  rpc Connect(stream ClientCommand) returns (stream ServerEvent);
+}
+
+// ClientCommand expresses an intent. It must not contain authoritative score,
+// winner, turn ownership, board state, or lifecycle results.
+message ClientCommand {
+  CommandMetadata metadata = 1;
+
+  oneof command {
+    JoinSession join = 10;
+    ReadyUp ready = 11;
+    LeaveSession leave = 12;
+    GameplayIntent gameplay = 13;
+  }
+}
+
+// Metadata used to correlate commands and support future idempotency checks.
+message CommandMetadata {
+  string command_id = 1;
+  uint64 client_sequence = 2;
+  SessionIdentity identity = 3;
+}
+
+// Session and player identifiers are assigned by the server. Values supplied
+// by a client are context/correlation data only and never replace server state.
+message SessionIdentity {
+  string match_id = 1;
+  string session_id = 2;
+  string player_id = 3;
+}
+
+// Requests entry into a session. Empty identity fields are valid while the
+// server assigns the session and player identifiers.
+message JoinSession {}
+
+message ReadyUp {
+  bool ready = 1;
+}
+
+message LeaveSession {
+  LeaveReason reason = 1;
+}
+
+// GameplayIntent contains only player intent. The server derives the result
+// from authoritative state.
+message GameplayIntent {
+  oneof action {
+    FlipCardIntent flip_card = 1;
+  }
+}
+
+message FlipCardIntent {
+  uint32 position = 1;
+}
+
+// ServerEvent contains an authoritative fact or result.
+message ServerEvent {
+  ServerEventMetadata metadata = 1;
+
+  oneof event {
+    SessionCreated session_created = 10;
+    JoinAccepted join_accepted = 11;
+    SessionStateChanged session_state_changed = 12;
+    ReadyStateChanged ready_state_changed = 13;
+    GameStarted game_started = 14;
+    CommandAccepted command_accepted = 15;
+    GameplayUpdate gameplay_update = 16;
+    CommandRejected command_rejected = 17;
+    PlayerLeft player_left = 18;
+    SessionFinished session_finished = 19;
+    ProtocolError protocol_error = 20;
+  }
+}
+
+// server_event_sequence is transport ordering and state_version is the
+// authoritative state revision. They are intentionally separate from the
+// client command sequence.
+message ServerEventMetadata {
+  uint64 server_event_sequence = 1;
+  uint64 state_version = 2;
+  SessionIdentity identity = 3;
+  string correlated_command_id = 4;
+}
+
+message SessionCreated {}
+
+message JoinAccepted {
+  PlayerSlot player = 1;
+  uint32 connected_players = 2;
+}
+
+message SessionStateChanged {
+  SessionState state = 1;
+}
+
+message ReadyStateChanged {
+  string player_id = 1;
+  bool ready = 2;
+}
+
+message GameStarted {
+  string first_player_id = 1;
+}
+
+message CommandAccepted {
+  string command_id = 1;
+}
+
+message GameplayUpdate {
+  oneof update {
+    CardFlipAccepted card_flip_accepted = 1;
+  }
+}
+
+message CardFlipAccepted {
+  uint32 position = 1;
+}
+
+message CommandRejected {
+  RejectionCode code = 1;
+  string reason = 2;
+}
+
+message PlayerLeft {
+  string player_id = 1;
+  LeaveReason reason = 2;
+}
+
+message SessionFinished {
+  SessionState terminal_state = 1;
+  MatchResult result = 2;
+  string winner_player_id = 3;
+}
+
+message ProtocolError {
+  ProtocolErrorCode code = 1;
+  string message = 2;
+}
+
+message PlayerSlot {
+  string player_id = 1;
+  uint32 slot = 2;
+}
+
+enum SessionState {
+  SESSION_STATE_UNSPECIFIED = 0;
+  SESSION_STATE_WAITING_FOR_PLAYERS = 1;
+  SESSION_STATE_READY = 2;
+  SESSION_STATE_RUNNING = 3;
+  SESSION_STATE_COMPLETED = 4;
+  SESSION_STATE_ABORTED = 5;
+  SESSION_STATE_EXPIRED = 6;
+}
+
+enum LeaveReason {
+  LEAVE_REASON_UNSPECIFIED = 0;
+  LEAVE_REASON_VOLUNTARY = 1;
+  LEAVE_REASON_DISCONNECTED = 2;
+  LEAVE_REASON_SESSION_TERMINATED = 3;
+}
+
+enum RejectionCode {
+  REJECTION_CODE_UNSPECIFIED = 0;
+  REJECTION_CODE_INVALID_COMMAND = 1;
+  REJECTION_CODE_INVALID_STATE = 2;
+  REJECTION_CODE_NOT_AUTHORIZED = 3;
+  REJECTION_CODE_OUT_OF_ORDER = 4;
+  REJECTION_CODE_DUPLICATE = 5;
+  REJECTION_CODE_ILLEGAL_MOVE = 6;
+}
+
+enum ProtocolErrorCode {
+  PROTOCOL_ERROR_CODE_UNSPECIFIED = 0;
+  PROTOCOL_ERROR_CODE_MALFORMED_MESSAGE = 1;
+  PROTOCOL_ERROR_CODE_UNSUPPORTED_VERSION = 2;
+  PROTOCOL_ERROR_CODE_MISSING_IDENTITY = 3;
+}
+
+enum MatchResult {
+  MATCH_RESULT_UNSPECIFIED = 0;
+  MATCH_RESULT_WIN = 1;
+  MATCH_RESULT_DRAW = 2;
+  MATCH_RESULT_NO_CONTEST = 3;
+}
