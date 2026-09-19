@@ -19,6 +19,127 @@ public sealed record JoinMatchmakingRequest(string PlayerKey, string? Compatibil
 /// <param name="PlayerKey">The caller-owned matchmaking key.</param>
 public sealed record CancelMatchmakingRequest(string PlayerKey);
 
+/// <summary>Represents the server-assigned identifier for a lobby room.</summary>
+public readonly record struct RoomIdentity
+{
+    /// <summary>Initializes a room identity.</summary>
+    /// <param name="value">The room identifier value.</param>
+    /// <exception cref="ArgumentException">Thrown when the room identifier is empty.</exception>
+    public RoomIdentity(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException("Room identity is required.", nameof(value));
+        }
+
+        Value = value;
+    }
+
+    /// <summary>Gets the room identifier value.</summary>
+    public string Value { get; }
+
+    /// <inheritdoc />
+    public override string ToString() => Value;
+}
+
+/// <summary>Represents the room lifecycle used by the lobby flow.</summary>
+public enum RoomState
+{
+    /// <summary>The room is waiting for a second player.</summary>
+    WaitingForOpponent,
+    /// <summary>The room is ready for the authoritative game to start.</summary>
+    Ready,
+    /// <summary>The game is actively running.</summary>
+    Running,
+    /// <summary>The game completed normally.</summary>
+    Completed,
+    /// <summary>The room ended because a player left or the server aborted it.</summary>
+    Aborted,
+    /// <summary>The room expired before a second player joined.</summary>
+    Expired
+}
+
+/// <summary>Represents the authoritative game configuration assigned to a session.</summary>
+/// <param name="Theme">The room theme selected by the host.</param>
+/// <param name="Difficulty">The room difficulty selected by the host.</param>
+/// <param name="BoardSeed">The deterministic seed used to build the board on both clients.</param>
+public sealed record GameConfiguration(string Theme, string Difficulty, string BoardSeed);
+
+/// <summary>Represents a server-owned room in the lobby.</summary>
+public sealed record GameRoom(
+    RoomIdentity RoomId,
+    SessionIdentity SessionId,
+    PlayerIdentity HostPlayer,
+    string HostNickname,
+    string Theme,
+    string Difficulty,
+    string BoardSeed,
+    RoomState State,
+    DateTimeOffset CreatedAt,
+    PlayerIdentity? GuestPlayer = null,
+    string? GuestNickname = null);
+
+/// <summary>Describes a listing item for a discoverable room.</summary>
+public sealed record RoomListItem(
+    RoomIdentity RoomId,
+    string HostNickname,
+    string Theme,
+    string Difficulty,
+    DateTimeOffset CreatedAt,
+    int ConnectedPlayers,
+    int MaximumPlayers);
+
+/// <summary>Creates a new room/lobby for a host.</summary>
+/// <param name="Nickname">The host nickname shown to guests.</param>
+/// <param name="Theme">The theme for the authoritative match configuration.</param>
+/// <param name="Difficulty">The difficulty for the authoritative match configuration.</param>
+public sealed record CreateRoomRequest(string Nickname, string Theme, string Difficulty);
+
+/// <summary>Contains the result of creating a room.</summary>
+public sealed record CreateRoomResult(GameRoom Room, GameConfiguration Configuration, PlayerIdentity PlayerId, string? Reason = null)
+{
+    /// <summary>Gets whether the room was created successfully.</summary>
+    public bool IsSuccess => Reason is null;
+}
+
+/// <summary>Requests that a guest enter a specific waiting room.</summary>
+/// <param name="RoomId">The room to join.</param>
+/// <param name="Nickname">The guest nickname shown to the host.</param>
+public sealed record JoinRoomRequest(RoomIdentity RoomId, string Nickname);
+
+/// <summary>Indicates the outcome of a join-room request.</summary>
+public enum RoomJoinStatus
+{
+    /// <summary>The room was joined successfully.</summary>
+    Success,
+    /// <summary>The room could not be located.</summary>
+    RoomNotFound,
+    /// <summary>The room is not accepting a second player.</summary>
+    RoomNotAvailable,
+    /// <summary>The guest nickname is invalid.</summary>
+    InvalidNickname,
+    /// <summary>The provided room identifier is invalid.</summary>
+    InvalidRoomId,
+    /// <summary>The room already has both players assigned.</summary>
+    AlreadyFull,
+    /// <summary>The server rejected the room join request.</summary>
+    Rejected
+}
+
+/// <summary>Contains the result of joining a room.</summary>
+public sealed record JoinRoomResult(
+    RoomJoinStatus Status,
+    RoomIdentity RoomId,
+    SessionIdentity SessionId,
+    PlayerIdentity? PlayerId = null,
+    GameConfiguration? Configuration = null,
+    GameRoom? Room = null,
+    string? Reason = null)
+{
+    /// <summary>Gets whether the join succeeded.</summary>
+    public bool IsSuccess => Status == RoomJoinStatus.Success;
+}
+
 /// <summary>Describes the outcome state of a matchmaking request.</summary>
 public enum MatchmakingStatus
 {
@@ -165,6 +286,23 @@ public interface IMatchmakingSessionGateway
     /// <param name="runtime">The runtime when registered; otherwise <see langword="null"/>.</param>
     /// <returns><see langword="true"/> when the runtime exists.</returns>
     bool TryGetRuntime(SessionIdentity session, out IMatchSessionRuntime? runtime);
+
+    /// <summary>Creates a lobby room owned by the host.</summary>
+    /// <param name="request">The room creation request.</param>
+    /// <param name="cancellationToken">The token used to cancel creation.</param>
+    /// <returns>The created room and its authoritative configuration.</returns>
+    Task<CreateRoomResult> CreateRoomAsync(CreateRoomRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Lists rooms available to receive a second player.</summary>
+    /// <param name="cancellationToken">The token used to cancel the request.</param>
+    /// <returns>A read-only snapshot of discoverable rooms.</returns>
+    Task<IReadOnlyList<RoomListItem>> ListRoomsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Joins a guest to a waiting room and preserves the host configuration.</summary>
+    /// <param name="request">The room join request.</param>
+    /// <param name="cancellationToken">The token used to cancel the join.</param>
+    /// <returns>The result of the join attempt.</returns>
+    Task<JoinRoomResult> JoinRoomAsync(JoinRoomRequest request, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Creates authoritative session runtimes.</summary>

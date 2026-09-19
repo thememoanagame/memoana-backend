@@ -8,6 +8,67 @@ namespace MemoAna.UnitTests;
 public sealed class MatchmakingTests
 {
     [Fact]
+    public async Task CreateRoomProducesAuthoritativeConfigurationAndWaitingState()
+    {
+        var runtimeFactory = new FakeRuntimeFactory();
+        await using var matchmaking = Create(runtimeFactory);
+
+        var created = await matchmaking.CreateRoomAsync(new CreateRoomRequest("Alice", "forest", "easy"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(RoomState.WaitingForOpponent, created.Room.State);
+        Assert.NotEmpty(created.Room.RoomId.Value);
+        Assert.NotEmpty(created.Room.SessionId.Value);
+        Assert.NotEmpty(created.Room.HostPlayer.Value);
+        Assert.NotEqual("Alice", created.Room.HostPlayer.Value);
+        Assert.Equal("forest", created.Room.Theme);
+        Assert.Equal("easy", created.Room.Difficulty);
+        Assert.False(string.IsNullOrWhiteSpace(created.Room.BoardSeed));
+        Assert.Equal(created.Room.Theme, created.Configuration.Theme);
+        Assert.Equal(created.Room.Difficulty, created.Configuration.Difficulty);
+        Assert.Equal(created.Room.BoardSeed, created.Configuration.BoardSeed);
+    }
+
+    [Fact]
+    public async Task ListRoomsReturnsOnlyWaitingRoomsAndJoinPreservesConfiguration()
+    {
+        var runtimeFactory = new FakeRuntimeFactory();
+        await using var matchmaking = Create(runtimeFactory);
+
+        var created = await matchmaking.CreateRoomAsync(new CreateRoomRequest("Alice", "forest", "easy"), TestContext.Current.CancellationToken);
+        var rooms = await matchmaking.ListRoomsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Single(rooms);
+        Assert.Equal(created.Room.RoomId, rooms[0].RoomId);
+        Assert.Equal("Alice", rooms[0].HostNickname);
+
+        var joined = await matchmaking.JoinRoomAsync(new JoinRoomRequest(created.Room.RoomId, "Bob"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(created.Room.RoomId, joined.RoomId);
+        Assert.Equal(created.Room.Theme, joined.Configuration!.Theme);
+        Assert.Equal(created.Room.Difficulty, joined.Configuration.Difficulty);
+        Assert.Equal(created.Room.BoardSeed, joined.Configuration.BoardSeed);
+        Assert.NotEqual("Bob", joined.PlayerId!.Value.Value);
+
+        var listAfterJoin = await matchmaking.ListRoomsAsync(TestContext.Current.CancellationToken);
+        Assert.Empty(listAfterJoin);
+    }
+
+    [Fact]
+    public async Task JoinRoomRejectsDuplicateGuestOrFullRoom()
+    {
+        var runtimeFactory = new FakeRuntimeFactory();
+        await using var matchmaking = Create(runtimeFactory);
+
+        var created = await matchmaking.CreateRoomAsync(new CreateRoomRequest("Alice", "forest", "easy"), TestContext.Current.CancellationToken);
+        var firstJoin = await matchmaking.JoinRoomAsync(new JoinRoomRequest(created.Room.RoomId, "Bob"), TestContext.Current.CancellationToken);
+        var secondJoin = await matchmaking.JoinRoomAsync(new JoinRoomRequest(created.Room.RoomId, "Charlie"), TestContext.Current.CancellationToken);
+
+        Assert.True(firstJoin.IsSuccess);
+        Assert.False(secondJoin.IsSuccess);
+        Assert.Equal(RoomJoinStatus.RoomNotAvailable, secondJoin.Status);
+    }
+
+    [Fact]
     public async Task FirstPlayerWaitsAndSecondPlayerReceivesOneMatch()
     {
         var runtimeFactory = new FakeRuntimeFactory();
@@ -303,7 +364,7 @@ public sealed class MatchmakingTests
         }
     }
 
-    private sealed class FakeRuntime(bool failSubmission) : IMatchSessionRuntime
+    private sealed class FakeRuntime(bool failSubmission) : IMatchSessionRuntime, IMatchSessionEventSource
     {
         public List<SessionCommand> JoinCommands { get; } = [];
         public bool IsDisposed { get; private set; }
@@ -319,6 +380,11 @@ public sealed class MatchmakingTests
                     SessionRejectionCode.InvalidState,
                     "Fake runtime rejected the command.")
                 : SessionCommandResult.Accept(Array.Empty<SessionEvent>()));
+        }
+
+        public IAsyncEnumerable<SessionEvent> Subscribe(CancellationToken cancellationToken = default)
+        {
+            return AsyncEnumerable.Empty<SessionEvent>();
         }
 
         public ValueTask DisposeAsync()

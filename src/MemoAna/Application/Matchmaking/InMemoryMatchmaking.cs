@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using MemoAna.Domain.Matchmaking;
 using MemoAna.Domain.Sessions;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,7 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
         new(StringComparer.Ordinal);
     private readonly Dictionary<SessionIdentity, IMatchSessionEventSource> _matchedSessions = [];
     private readonly Dictionary<SessionIdentity, IMatchSessionRuntime> _sessionRuntimes = [];
+    private readonly Dictionary<RoomIdentity, GameRoom> _rooms = [];
     private readonly IMatchmakingCompatibilityPolicy _compatibilityPolicy;
     private readonly IServerMatchmakingIdentityGenerator _identityGenerator;
     private readonly IMatchSessionRuntimeFactory _runtimeFactory;
@@ -294,6 +296,212 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionG
             var found = _sessionRuntimes.TryGetValue(session, out runtime);
             _logger.LogTrace("Runtime lookup for session {SessionId} returned {Found}.", session.Value, found);
             return found;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<CreateRoomResult> CreateRoomAsync(
+        CreateRoomRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfDisposed();
+
+        var nickname = request.Nickname?.Trim();
+        var theme = request.Theme?.Trim();
+        var difficulty = request.Difficulty?.Trim();
+        if (string.IsNullOrWhiteSpace(nickname) || nickname.Length > 32)
+        {
+            return new CreateRoomResult(
+                new GameRoom(new RoomIdentity("room-invalid"), new SessionIdentity("session-invalid"), new PlayerIdentity("player-invalid"), nickname ?? string.Empty, theme ?? string.Empty, difficulty ?? string.Empty, string.Empty, RoomState.WaitingForOpponent, DateTimeOffset.UtcNow),
+                new GameConfiguration(theme ?? string.Empty, difficulty ?? string.Empty, string.Empty),
+                new PlayerIdentity("player-invalid"),
+                "Nickname is required and must be at most 32 characters long.");
+        }
+
+        if (string.IsNullOrWhiteSpace(theme) || theme.Length > 64)
+        {
+            return new CreateRoomResult(
+                new GameRoom(new RoomIdentity("room-invalid"), new SessionIdentity("session-invalid"), new PlayerIdentity("player-invalid"), nickname, theme ?? string.Empty, difficulty ?? string.Empty, string.Empty, RoomState.WaitingForOpponent, DateTimeOffset.UtcNow),
+                new GameConfiguration(theme ?? string.Empty, difficulty ?? string.Empty, string.Empty),
+                new PlayerIdentity("player-invalid"),
+                "Theme is required and must be at most 64 characters long.");
+        }
+
+        if (string.IsNullOrWhiteSpace(difficulty) || difficulty.Length > 32)
+        {
+            return new CreateRoomResult(
+                new GameRoom(new RoomIdentity("room-invalid"), new SessionIdentity("session-invalid"), new PlayerIdentity("player-invalid"), nickname, theme, difficulty ?? string.Empty, string.Empty, RoomState.WaitingForOpponent, DateTimeOffset.UtcNow),
+                new GameConfiguration(theme, difficulty ?? string.Empty, string.Empty),
+                new PlayerIdentity("player-invalid"),
+                "Difficulty is required and must be at most 32 characters long.");
+        }
+
+        lock (_gate)
+        {
+            var roomId = new RoomIdentity($"room-{Guid.NewGuid():N}");
+            var sessionId = new SessionIdentity($"session-{Guid.NewGuid():N}");
+            var hostPlayer = new PlayerIdentity($"player-{Guid.NewGuid():N}");
+            var boardSeed = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+            var room = new GameRoom(
+                roomId,
+                sessionId,
+                hostPlayer,
+                nickname,
+                theme,
+                difficulty,
+                boardSeed,
+                RoomState.WaitingForOpponent,
+                DateTimeOffset.UtcNow);
+            _rooms[roomId] = room;
+            return new CreateRoomResult(room, new GameConfiguration(theme, difficulty, boardSeed), hostPlayer);
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<RoomListItem>> ListRoomsAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfDisposed();
+
+        lock (_gate)
+        {
+            var rooms = _rooms.Values
+                .Where(room => room.State == RoomState.WaitingForOpponent)
+                .OrderBy(room => room.CreatedAt)
+                .Select(room => new RoomListItem(
+                    room.RoomId,
+                    room.HostNickname,
+                    room.Theme,
+                    room.Difficulty,
+                    room.CreatedAt,
+                    room.GuestPlayer is null ? 1 : 2,
+                    2))
+                .ToArray();
+            return Task.FromResult<IReadOnlyList<RoomListItem>>(rooms);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<JoinRoomResult> JoinRoomAsync(
+        JoinRoomRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfDisposed();
+
+        var nickname = request.Nickname?.Trim();
+        if (string.IsNullOrWhiteSpace(nickname) || nickname.Length > 32)
+        {
+            return new JoinRoomResult(
+                RoomJoinStatus.InvalidNickname,
+                request.RoomId,
+                new SessionIdentity("session-invalid"),
+                Reason: "Nickname is required and must be at most 32 characters long.");
+        }
+
+        if (request.RoomId == default)
+        {
+            return new JoinRoomResult(
+                RoomJoinStatus.InvalidRoomId,
+                request.RoomId,
+                new SessionIdentity("session-invalid"),
+                Reason: "Room identifier is required.");
+        }
+
+        GameRoom updated;
+        var guestPlayer = new PlayerIdentity($"player-{Guid.NewGuid():N}");
+        lock (_gate)
+        {
+            if (!_rooms.TryGetValue(request.RoomId, out var room))
+            {
+                return new JoinRoomResult(
+                    RoomJoinStatus.RoomNotFound,
+                    request.RoomId,
+                    new SessionIdentity("session-invalid"),
+                    Reason: "The requested room could not be found.");
+            }
+
+            if (room.State != RoomState.WaitingForOpponent)
+            {
+                return new JoinRoomResult(
+                    RoomJoinStatus.RoomNotAvailable,
+                    room.RoomId,
+                    room.SessionId,
+                    Reason: "The room is not currently available.");
+            }
+
+            if (room.GuestPlayer is not null)
+            {
+                return new JoinRoomResult(
+                    RoomJoinStatus.AlreadyFull,
+                    room.RoomId,
+                    room.SessionId,
+                    Reason: "The room already has two players.");
+            }
+
+            updated = room with
+            {
+                GuestPlayer = guestPlayer,
+                GuestNickname = nickname,
+                State = RoomState.Ready
+            };
+            _rooms[request.RoomId] = updated;
+        }
+
+        try
+        {
+            var runtime = await _runtimeFactory.CreateAsync(updated.SessionId, new MatchIdentity(updated.RoomId.Value), cancellationToken).ConfigureAwait(false);
+            var hostJoin = await runtime.SubmitAsync(
+                new JoinSessionCommand($"{updated.SessionId.Value}-join-host", updated.HostPlayer, 1),
+                cancellationToken).ConfigureAwait(false);
+            var guestJoin = await runtime.SubmitAsync(
+                new JoinSessionCommand($"{updated.SessionId.Value}-join-guest", guestPlayer, 1),
+                cancellationToken).ConfigureAwait(false);
+
+            if (!hostJoin.Accepted || !guestJoin.Accepted)
+            {
+                await runtime.DisposeAsync().ConfigureAwait(false);
+                lock (_gate)
+                {
+                    _rooms[request.RoomId] = updated with { GuestPlayer = null, GuestNickname = null, State = RoomState.WaitingForOpponent };
+                }
+
+                return new JoinRoomResult(
+                    RoomJoinStatus.Rejected,
+                    request.RoomId,
+                    updated.SessionId,
+                    Reason: "The server rejected the room join.");
+            }
+
+            lock (_gate)
+            {
+                _matchedSessions[updated.SessionId] = runtime as IMatchSessionEventSource ?? throw new InvalidOperationException("Session runtime must expose event subscriptions.");
+                _sessionRuntimes[updated.SessionId] = runtime;
+            }
+
+            return new JoinRoomResult(
+                RoomJoinStatus.Success,
+                updated.RoomId,
+                updated.SessionId,
+                guestPlayer,
+                new GameConfiguration(updated.Theme, updated.Difficulty, updated.BoardSeed),
+                updated,
+                "Joined room successfully.");
+        }
+        catch
+        {
+            lock (_gate)
+            {
+                if (_rooms.TryGetValue(request.RoomId, out var current))
+                {
+                    _rooms[request.RoomId] = current with { GuestPlayer = null, GuestNickname = null, State = RoomState.WaitingForOpponent };
+                }
+            }
+
+            throw;
         }
     }
 

@@ -85,6 +85,15 @@
             <param name="runtime">The runtime when found.</param>
             <returns><see langword="true"/> when the runtime exists.</returns>
         </member>
+        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.CreateRoomAsync(MemoAna.Application.Matchmaking.CreateRoomRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.ListRoomsAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.JoinRoomAsync(MemoAna.Application.Matchmaking.JoinRoomRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
         <member name="M:MemoAna.Application.Matchmaking.InMemoryMatchmaking.DisposeAsync">
             <summary>Stops matchmaking and completes all active waiting requests.</summary>
             <returns>A value task that completes after active waiters are released.</returns>
@@ -126,6 +135,153 @@
         </member>
         <member name="P:MemoAna.Application.Matchmaking.CancelMatchmakingRequest.PlayerKey">
             <summary>The caller-owned matchmaking key.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.RoomIdentity">
+            <summary>Represents the server-assigned identifier for a lobby room.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.RoomIdentity.#ctor(System.String)">
+            <summary>Initializes a room identity.</summary>
+            <param name="value">The room identifier value.</param>
+            <exception cref="T:System.ArgumentException">Thrown when the room identifier is empty.</exception>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.RoomIdentity.Value">
+            <summary>Gets the room identifier value.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.RoomIdentity.ToString">
+            <inheritdoc />
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.RoomState">
+            <summary>Represents the room lifecycle used by the lobby flow.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomState.WaitingForOpponent">
+            <summary>The room is waiting for a second player.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomState.Ready">
+            <summary>The room is ready for the authoritative game to start.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomState.Running">
+            <summary>The game is actively running.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomState.Completed">
+            <summary>The game completed normally.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomState.Aborted">
+            <summary>The room ended because a player left or the server aborted it.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomState.Expired">
+            <summary>The room expired before a second player joined.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.GameConfiguration">
+            <summary>Represents the authoritative game configuration assigned to a session.</summary>
+            <param name="Theme">The room theme selected by the host.</param>
+            <param name="Difficulty">The room difficulty selected by the host.</param>
+            <param name="BoardSeed">The deterministic seed used to build the board on both clients.</param>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.GameConfiguration.#ctor(System.String,System.String,System.String)">
+            <summary>Represents the authoritative game configuration assigned to a session.</summary>
+            <param name="Theme">The room theme selected by the host.</param>
+            <param name="Difficulty">The room difficulty selected by the host.</param>
+            <param name="BoardSeed">The deterministic seed used to build the board on both clients.</param>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.GameConfiguration.Theme">
+            <summary>The room theme selected by the host.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.GameConfiguration.Difficulty">
+            <summary>The room difficulty selected by the host.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.GameConfiguration.BoardSeed">
+            <summary>The deterministic seed used to build the board on both clients.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.GameRoom">
+            <summary>Represents a server-owned room in the lobby.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.GameRoom.#ctor(MemoAna.Application.Matchmaking.RoomIdentity,MemoAna.Domain.Matchmaking.SessionIdentity,MemoAna.Domain.Matchmaking.PlayerIdentity,System.String,System.String,System.String,System.String,MemoAna.Application.Matchmaking.RoomState,System.DateTimeOffset,System.Nullable{MemoAna.Domain.Matchmaking.PlayerIdentity},System.String)">
+            <summary>Represents a server-owned room in the lobby.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.RoomListItem">
+            <summary>Describes a listing item for a discoverable room.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.RoomListItem.#ctor(MemoAna.Application.Matchmaking.RoomIdentity,System.String,System.String,System.String,System.DateTimeOffset,System.Int32,System.Int32)">
+            <summary>Describes a listing item for a discoverable room.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.CreateRoomRequest">
+            <summary>Creates a new room/lobby for a host.</summary>
+            <param name="Nickname">The host nickname shown to guests.</param>
+            <param name="Theme">The theme for the authoritative match configuration.</param>
+            <param name="Difficulty">The difficulty for the authoritative match configuration.</param>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.CreateRoomRequest.#ctor(System.String,System.String,System.String)">
+            <summary>Creates a new room/lobby for a host.</summary>
+            <param name="Nickname">The host nickname shown to guests.</param>
+            <param name="Theme">The theme for the authoritative match configuration.</param>
+            <param name="Difficulty">The difficulty for the authoritative match configuration.</param>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.CreateRoomRequest.Nickname">
+            <summary>The host nickname shown to guests.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.CreateRoomRequest.Theme">
+            <summary>The theme for the authoritative match configuration.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.CreateRoomRequest.Difficulty">
+            <summary>The difficulty for the authoritative match configuration.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.CreateRoomResult">
+            <summary>Contains the result of creating a room.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.CreateRoomResult.#ctor(MemoAna.Application.Matchmaking.GameRoom,MemoAna.Application.Matchmaking.GameConfiguration,MemoAna.Domain.Matchmaking.PlayerIdentity,System.String)">
+            <summary>Contains the result of creating a room.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.CreateRoomResult.IsSuccess">
+            <summary>Gets whether the room was created successfully.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.JoinRoomRequest">
+            <summary>Requests that a guest enter a specific waiting room.</summary>
+            <param name="RoomId">The room to join.</param>
+            <param name="Nickname">The guest nickname shown to the host.</param>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.JoinRoomRequest.#ctor(MemoAna.Application.Matchmaking.RoomIdentity,System.String)">
+            <summary>Requests that a guest enter a specific waiting room.</summary>
+            <param name="RoomId">The room to join.</param>
+            <param name="Nickname">The guest nickname shown to the host.</param>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.JoinRoomRequest.RoomId">
+            <summary>The room to join.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.JoinRoomRequest.Nickname">
+            <summary>The guest nickname shown to the host.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.RoomJoinStatus">
+            <summary>Indicates the outcome of a join-room request.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomJoinStatus.Success">
+            <summary>The room was joined successfully.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomJoinStatus.RoomNotFound">
+            <summary>The room could not be located.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomJoinStatus.RoomNotAvailable">
+            <summary>The room is not accepting a second player.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomJoinStatus.InvalidNickname">
+            <summary>The guest nickname is invalid.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomJoinStatus.InvalidRoomId">
+            <summary>The provided room identifier is invalid.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomJoinStatus.AlreadyFull">
+            <summary>The room already has both players assigned.</summary>
+        </member>
+        <member name="F:MemoAna.Application.Matchmaking.RoomJoinStatus.Rejected">
+            <summary>The server rejected the room join request.</summary>
+        </member>
+        <member name="T:MemoAna.Application.Matchmaking.JoinRoomResult">
+            <summary>Contains the result of joining a room.</summary>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.JoinRoomResult.#ctor(MemoAna.Application.Matchmaking.RoomJoinStatus,MemoAna.Application.Matchmaking.RoomIdentity,MemoAna.Domain.Matchmaking.SessionIdentity,System.Nullable{MemoAna.Domain.Matchmaking.PlayerIdentity},MemoAna.Application.Matchmaking.GameConfiguration,MemoAna.Application.Matchmaking.GameRoom,System.String)">
+            <summary>Contains the result of joining a room.</summary>
+        </member>
+        <member name="P:MemoAna.Application.Matchmaking.JoinRoomResult.IsSuccess">
+            <summary>Gets whether the join succeeded.</summary>
         </member>
         <member name="T:MemoAna.Application.Matchmaking.MatchmakingStatus">
             <summary>Describes the outcome state of a matchmaking request.</summary>
@@ -344,6 +500,23 @@
             <param name="session">The session identity.</param>
             <param name="runtime">The runtime when registered; otherwise <see langword="null"/>.</param>
             <returns><see langword="true"/> when the runtime exists.</returns>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchmakingSessionGateway.CreateRoomAsync(MemoAna.Application.Matchmaking.CreateRoomRequest,System.Threading.CancellationToken)">
+            <summary>Creates a lobby room owned by the host.</summary>
+            <param name="request">The room creation request.</param>
+            <param name="cancellationToken">The token used to cancel creation.</param>
+            <returns>The created room and its authoritative configuration.</returns>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchmakingSessionGateway.ListRoomsAsync(System.Threading.CancellationToken)">
+            <summary>Lists rooms available to receive a second player.</summary>
+            <param name="cancellationToken">The token used to cancel the request.</param>
+            <returns>A read-only snapshot of discoverable rooms.</returns>
+        </member>
+        <member name="M:MemoAna.Application.Matchmaking.IMatchmakingSessionGateway.JoinRoomAsync(MemoAna.Application.Matchmaking.JoinRoomRequest,System.Threading.CancellationToken)">
+            <summary>Joins a guest to a waiting room and preserves the host configuration.</summary>
+            <param name="request">The room join request.</param>
+            <param name="cancellationToken">The token used to cancel the join.</param>
+            <returns>The result of the join attempt.</returns>
         </member>
         <member name="T:MemoAna.Application.Matchmaking.IMatchSessionRuntimeFactory">
             <summary>Creates authoritative session runtimes.</summary>
