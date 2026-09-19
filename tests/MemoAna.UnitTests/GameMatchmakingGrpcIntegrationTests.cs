@@ -1,8 +1,17 @@
 using Grpc.Core;
 using Grpc.Net.Client;
+using MemoAna.Application.Matchmaking;
+using MemoAna.Domain.Matchmaking;
+using MemoAna.Domain.Sessions;
 using MemoAna.Proto.GameMatchmaking.V1;
+using MemoAna.Presentation.Grpc;
 using Microsoft.AspNetCore.Mvc.Testing;
+using System.Reflection;
+using DomainSessionIdentity = MemoAna.Domain.Matchmaking.SessionIdentity;
 
+using ProtoSessionIdentity = MemoAna.Proto.GameMatchmaking.V1.SessionIdentity;
+using DomainLeaveReason = MemoAna.Domain.Sessions.LeaveReason;
+using ProtoLeaveReason = MemoAna.Proto.GameMatchmaking.V1.LeaveReason;
 namespace MemoAna.UnitTests;
 
 public sealed class GameMatchmakingGrpcIntegrationTests
@@ -162,10 +171,113 @@ public sealed class GameMatchmakingGrpcIntegrationTests
         Assert.Equal(ProtocolErrorCode.MalformedMessage, invalidGameplay.ProtocolError.Code);
     }
 
+    [Fact]
+    public void TransportAdapterCoversValidationAndMappingBranches()
+    {
+        var validMetadata = new CommandMetadata
+        {
+            CommandId = "cmd-1",
+            ClientSequence = 1,
+            Identity = new ProtoSessionIdentity { MatchId = "match-1", SessionId = "session-1", PlayerId = "player-1" }
+        };
+
+        Assert.True(InvokeTryValidate(new ClientCommand { Metadata = validMetadata, Ready = new ReadyUp { Ready = true } }, out _));
+
+        Assert.False(InvokeTryValidate(new ClientCommand { Join = new JoinSession() }, out var missingMetadataError));
+        Assert.Equal(ProtocolErrorCode.MalformedMessage, missingMetadataError!.ProtocolError.Code);
+
+        Assert.False(InvokeTryValidate(new ClientCommand
+        {
+            Metadata = new CommandMetadata { CommandId = string.Empty, ClientSequence = 1 },
+            Join = new JoinSession()
+        }, out var emptyCommandIdError));
+        Assert.Equal(ProtocolErrorCode.MalformedMessage, emptyCommandIdError!.ProtocolError.Code);
+
+        Assert.False(InvokeTryValidate(new ClientCommand
+        {
+            Metadata = new CommandMetadata
+            {
+                CommandId = "bad-identity",
+                ClientSequence = 1,
+                Identity = new ProtoSessionIdentity { MatchId = new string('m', 257), SessionId = "session-1", PlayerId = "player-1" }
+            },
+            Gameplay = new GameplayIntent { FlipCard = new FlipCardIntent { Position = 0 } }
+        }, out var oversizedIdentityError));
+        Assert.Equal(ProtocolErrorCode.MalformedMessage, oversizedIdentityError!.ProtocolError.Code);
+
+        Assert.False(InvokeTryValidate(new ClientCommand
+        {
+            Metadata = new CommandMetadata { CommandId = "bad-gameplay", ClientSequence = 1 },
+            Gameplay = new GameplayIntent { FlipCard = new FlipCardIntent { Position = MatchSession.BoardSize } }
+        }, out var invalidGameplayError));
+        Assert.Equal(ProtocolErrorCode.MalformedMessage, invalidGameplayError!.ProtocolError.Code);
+
+        var match = new MatchFound(
+            new MatchIdentity("match-1"),
+            new DomainSessionIdentity("session-1"),
+            new MatchmakingPlayerAssignment("player-a", new PlayerIdentity("player-a"), 1),
+            new MatchmakingPlayerAssignment("player-b", new PlayerIdentity("player-b"), 2));
+
+        var readyCommand = new ClientCommand
+        {
+            Metadata = new CommandMetadata { CommandId = "ready-1", ClientSequence = 2, Identity = new MemoAna.Proto.GameMatchmaking.V1.SessionIdentity { MatchId = "match-1", SessionId = "session-1", PlayerId = "player-a" } },
+            Ready = new ReadyUp { Ready = true }
+        };
+        Assert.IsType<ReadyUpCommand>(InvokeToDomainCommand(readyCommand, match));
+
+        var leaveCommand = new ClientCommand
+        {
+            Metadata = new CommandMetadata { CommandId = "leave-1", ClientSequence = 3, Identity = new MemoAna.Proto.GameMatchmaking.V1.SessionIdentity { MatchId = "match-1", SessionId = "session-1", PlayerId = "player-a" } },
+            Leave = new LeaveSession { Reason = ProtoLeaveReason.Voluntary }
+        };
+        Assert.IsType<LeaveSessionCommand>(InvokeToDomainCommand(leaveCommand, match));
+
+        var flipCommand = new ClientCommand
+        {
+            Metadata = new CommandMetadata { CommandId = "flip-1", ClientSequence = 4, Identity = new MemoAna.Proto.GameMatchmaking.V1.SessionIdentity { MatchId = "match-1", SessionId = "session-1", PlayerId = "player-a" } },
+            Gameplay = new GameplayIntent { FlipCard = new FlipCardIntent { Position = 0 } }
+        };
+        Assert.IsType<FlipCardCommand>(InvokeToDomainCommand(flipCommand, match));
+        Assert.Null(InvokeToDomainCommand(new ClientCommand { Metadata = new CommandMetadata { CommandId = "unsupported", ClientSequence = 5 } }, match));
+
+        Assert.NotNull(InvokeToServerEvent(new PlayerJoinedEvent(1, 1, new PlayerIdentity("player-a"), 1, 2), match).JoinAccepted);
+        Assert.NotNull(InvokeToServerEvent(new PlayerReadyChangedEvent(2, 2, new PlayerIdentity("player-a"), true), match).ReadyStateChanged);
+        Assert.NotNull(InvokeToServerEvent(new SessionStateChangedEvent(3, 3, SessionLifecycle.Ready), match).SessionStateChanged);
+        Assert.NotNull(InvokeToServerEvent(new GameStartedEvent(4, 4, new PlayerIdentity("player-a")), match).GameStarted);
+        Assert.NotNull(InvokeToServerEvent(new CardFlipAcceptedEvent(5, 5, new PlayerIdentity("player-a"), 0, 1), match).GameplayUpdate);
+        Assert.NotNull(InvokeToServerEvent(new PlayerLeftEvent(6, 6, new PlayerIdentity("player-b"), DomainLeaveReason.Disconnected), match).PlayerLeft);
+        Assert.NotNull(InvokeToServerEvent(new SessionFinishedEvent(7, 7, SessionLifecycle.Completed, MemoAna.Domain.Sessions.MatchResult.Draw, new PlayerIdentity("player-a")), match).SessionFinished);
+        var unsupported = Assert.Throws<TargetInvocationException>(() => InvokeToServerEvent(new UnsupportedSessionEvent(8, 8), match));
+        Assert.IsType<InvalidOperationException>(unsupported.InnerException);
+    }
+
+    private static bool InvokeTryValidate(ClientCommand command, out ServerEvent? error)
+    {
+        var method = typeof(GameMatchmakingGrpcService).GetMethod("TryValidate", BindingFlags.Static | BindingFlags.NonPublic);
+        var parameters = new object?[] { command, null };
+        var result = (bool)method!.Invoke(null, parameters)!;
+        error = (ServerEvent?)parameters[1];
+        return result;
+    }
+
+    private static SessionCommand? InvokeToDomainCommand(ClientCommand command, MatchFound match)
+    {
+        var method = typeof(GameMatchmakingGrpcService).GetMethod("ToDomainCommand", BindingFlags.Static | BindingFlags.NonPublic);
+        return (SessionCommand?)method!.Invoke(null, new object[] { command, match });
+    }
+
+    private static ServerEvent InvokeToServerEvent(SessionEvent @event, MatchFound match)
+    {
+        var method = typeof(GameMatchmakingGrpcService).GetMethod("ToServerEvent", BindingFlags.Static | BindingFlags.NonPublic);
+        return (ServerEvent)method!.Invoke(null, new object[] { @event, match })!;
+    }
+
+    private sealed record UnsupportedSessionEvent(ulong Sequence, ulong StateVersion) : SessionEvent(Sequence, StateVersion);
+
     private static ClientCommand Command(
         string id,
         ulong sequence,
-        SessionIdentity? identity = null,
+        MemoAna.Proto.GameMatchmaking.V1.SessionIdentity? identity = null,
         bool join = false,
         bool ready = false,
         bool leave = false)
@@ -189,7 +301,7 @@ public sealed class GameMatchmakingGrpcIntegrationTests
         }
         else if (leave)
         {
-            command.Leave = new LeaveSession { Reason = LeaveReason.Voluntary };
+            command.Leave = new LeaveSession { Reason = ProtoLeaveReason.Voluntary };
         }
 
         return command;
