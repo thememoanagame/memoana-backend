@@ -1,5 +1,8 @@
 using Google.Protobuf;
+using Grpc.Core;
 using MemoAna.Proto.GameMatchmaking.V1;
+using MemoAna.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MemoAna.UnitTests;
 
@@ -161,5 +164,32 @@ public sealed class GameMatchmakingContractTests
         Assert.Contains(SessionState.Completed, Enum.GetValues<SessionState>());
         Assert.Contains(SessionState.Aborted, Enum.GetValues<SessionState>());
         Assert.Contains(SessionState.Expired, Enum.GetValues<SessionState>());
+    }
+
+    [Fact]
+    public void GeneratedServiceCanBeBoundAndDefaultHandlerIsExplicitlyUnimplemented()
+    {
+        var service = new TestGameMatchmakingService();
+
+        var definition = GameMatchmakingService.BindService(service);
+
+        Assert.NotNull(definition);
+        Assert.Throws<RpcException>(() =>
+            service.Connect(null!, null!, null!).GetAwaiter().GetResult());
+    }
+
+    [Fact]
+    public async Task ExistingGreeterContractRemainsCallable()
+    {
+        var service = new GreeterService(NullLogger<GreeterService>.Instance);
+
+        var response = await service.SayHello(new HelloRequest { Name = "contract" }, null!);
+
+        Assert.Equal("Hello contract", response.Message);
+        Assert.NotNull(GreetReflection.Descriptor);
+    }
+
+    private sealed class TestGameMatchmakingService : GameMatchmakingService.GameMatchmakingServiceBase
+    {
     }
 }

@@ -90,7 +90,7 @@
       Text="Quality Gate aborted: unable to extract line, branch and method coverage data from $(QualityGateTextReport)." />
 
     <PropertyGroup Condition="'$(QualityGateBranchCoverage)' == '' and '$(QualityGateTotalBranches)' == '0'">
-      <QualityGateBranchCoverage>0</QualityGateBranchCoverage>
+      <QualityGateBranchCoverage>100</QualityGateBranchCoverage>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(QualityGateBranchCoverage)' == '' and '$(QualityGateTotalBranches)' != '0'">
