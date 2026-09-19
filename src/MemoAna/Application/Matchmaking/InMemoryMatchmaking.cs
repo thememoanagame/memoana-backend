@@ -1,3 +1,4 @@
+using MemoAna.Domain.Matchmaking;
 using MemoAna.Domain.Sessions;
 
 namespace MemoAna.Application.Matchmaking;
@@ -17,7 +18,7 @@ public sealed record MatchmakingOptions
     }
 }
 
-public sealed class InMemoryMatchmaking : IAsyncDisposable
+public sealed class InMemoryMatchmaking : IAsyncDisposable, IMatchmakingSessionGateway
 {
     private readonly object _gate = new();
     private readonly LinkedList<WaitingEntry> _waiting = [];
@@ -25,6 +26,8 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, MatchFound> _matchedPlayers =
         new(StringComparer.Ordinal);
+    private readonly Dictionary<SessionIdentity, IMatchSessionEventSource> _matchedSessions = [];
+    private readonly Dictionary<SessionIdentity, IMatchSessionRuntime> _sessionRuntimes = [];
     private readonly IMatchmakingCompatibilityPolicy _compatibilityPolicy;
     private readonly IServerMatchmakingIdentityGenerator _identityGenerator;
     private readonly IMatchSessionRuntimeFactory _runtimeFactory;
@@ -203,6 +206,35 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable
         return await entry.Completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public bool TrySubscribe(
+        SessionIdentity session,
+        CancellationToken cancellationToken,
+        out IAsyncEnumerable<SessionEvent>? events)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_gate)
+        {
+            if (_matchedSessions.TryGetValue(session, out var source))
+            {
+                events = source.Subscribe(cancellationToken);
+                return true;
+            }
+        }
+
+        events = null;
+        return false;
+    }
+
+    public bool TryGetRuntime(
+        SessionIdentity session,
+        out IMatchSessionRuntime? runtime)
+    {
+        lock (_gate)
+        {
+            return _sessionRuntimes.TryGetValue(session, out runtime);
+        }
+    }
+
     public ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
@@ -217,6 +249,8 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable
             entries = _activePlayers.Values.ToArray();
             _activePlayers.Clear();
             _matchedPlayers.Clear();
+            _matchedSessions.Clear();
+            _sessionRuntimes.Clear();
             _waiting.Clear();
             foreach (var entry in entries)
             {
@@ -278,6 +312,8 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable
                 throw new InvalidOperationException("Session rejected a matchmaking attachment.");
             }
 
+            var eventSource = runtime as IMatchSessionEventSource;
+
             var firstMatch = new MatchFound(identities.Match, identities.Session, first, second);
             var secondMatch = new MatchFound(identities.Match, identities.Session, second, first);
             CancellationTokenRegistration opponentCancellation;
@@ -288,6 +324,11 @@ public sealed class InMemoryMatchmaking : IAsyncDisposable
                 _activePlayers.Remove(incoming.Request.PlayerKey);
                 _matchedPlayers[opponent.Request.PlayerKey] = firstMatch;
                 _matchedPlayers[incoming.Request.PlayerKey] = secondMatch;
+                if (eventSource is not null)
+                {
+                    _matchedSessions[identities.Session] = eventSource;
+                }
+                _sessionRuntimes[identities.Session] = runtime;
                 opponentCancellation = CompleteEntry(opponent, new MatchmakingResult(
                     MatchmakingStatus.Matched,
                     opponent.Request.PlayerKey,

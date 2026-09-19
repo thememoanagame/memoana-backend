@@ -90,6 +90,31 @@ public interface IMatchSessionRuntime
     ValueTask DisposeAsync();
 }
 
+public interface IMatchSessionEventSource
+{
+    IAsyncEnumerable<SessionEvent> Subscribe(CancellationToken cancellationToken = default);
+}
+
+public interface IMatchmakingSessionGateway
+{
+    Task<MatchmakingResult> JoinAsync(
+        JoinMatchmakingRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<MatchmakingResult> WaitForMatchAsync(
+        string playerKey,
+        CancellationToken cancellationToken = default);
+
+    bool TrySubscribe(
+        SessionIdentity session,
+        CancellationToken cancellationToken,
+        out IAsyncEnumerable<SessionEvent>? events);
+
+    bool TryGetRuntime(
+        SessionIdentity session,
+        out IMatchSessionRuntime? runtime);
+}
+
 public interface IMatchSessionRuntimeFactory
 {
     Task<IMatchSessionRuntime> CreateAsync(

@@ -15,7 +15,9 @@ public sealed class SessionRuntimeFactory(SessionRuntimeRegistry registry) : IMa
             new SessionRuntimeHandle(registry.Create(session, match)));
     }
 
-    private sealed class SessionRuntimeHandle(SessionRuntime runtime) : IMatchSessionRuntime
+    private sealed class SessionRuntimeHandle(SessionRuntime runtime) :
+        IMatchSessionRuntime,
+        IMatchSessionEventSource
     {
         public Task<MemoAna.Domain.Sessions.SessionCommandResult> SubmitAsync(
             MemoAna.Domain.Sessions.SessionCommand command,
@@ -23,5 +25,9 @@ public sealed class SessionRuntimeFactory(SessionRuntimeRegistry registry) : IMa
             runtime.SubmitAsync(command, cancellationToken);
 
         public ValueTask DisposeAsync() => runtime.DisposeAsync();
+
+        public IAsyncEnumerable<MemoAna.Domain.Sessions.SessionEvent> Subscribe(
+            CancellationToken cancellationToken = default) =>
+            runtime.Subscribe(cancellationToken);
     }
 }
